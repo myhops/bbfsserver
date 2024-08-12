@@ -1,0 +1,5 @@
+builds:
+  - id: bbfsserver
+    dir: .
+    main: ./cmd/bbfsserver
+defaultBaseImage: cir-cn.chp.belastingdienst.nl/zandp06/cgr.dev/chainguard/static:latest-certs

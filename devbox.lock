@@ -1,0 +1,185 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "crane@latest": {
+      "last_modified": "2024-07-20T09:11:00Z",
+      "resolved": "github:NixOS/nixpkgs/6e14bbce7bea6c4efd7adfa88a40dac750d80100#crane",
+      "source": "devbox-search",
+      "version": "0.20.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "crane",
+              "path": "/nix/store/qw3f64d2cyrskiaf11jixwk6lj86y1r2-go-containerregistry-0.20.0-crane",
+              "default": true
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/v28kwldp4ymjmgiplr2npl76zbmdk77p-go-containerregistry-0.20.0",
+              "default": true
+            },
+            {
+              "name": "gcrane",
+              "path": "/nix/store/mbpf4m47051lmg6cvw1rpr22knsc3h92-go-containerregistry-0.20.0-gcrane"
+            }
+          ],
+          "store_path": "/nix/store/qw3f64d2cyrskiaf11jixwk6lj86y1r2-go-containerregistry-0.20.0-crane"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "crane",
+              "path": "/nix/store/asqv72clyxj8a9fdiiscfixjzf03zj44-go-containerregistry-0.20.0-crane",
+              "default": true
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/c2c9qrfg0ysipw88nyr1mxhjfxxhlxai-go-containerregistry-0.20.0",
+              "default": true
+            },
+            {
+              "name": "gcrane",
+              "path": "/nix/store/ykw6lizs08chhn2ss26yig8kcxynyqdd-go-containerregistry-0.20.0-gcrane"
+            }
+          ],
+          "store_path": "/nix/store/asqv72clyxj8a9fdiiscfixjzf03zj44-go-containerregistry-0.20.0-crane"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "crane",
+              "path": "/nix/store/x5j4k9vd2bl7q72kkcf9cqdl11l6chcb-go-containerregistry-0.20.0-crane",
+              "default": true
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/ydshh5655cnmw8jhjvi6smxjl7c0ck69-go-containerregistry-0.20.0",
+              "default": true
+            },
+            {
+              "name": "gcrane",
+              "path": "/nix/store/1dq20y9dbzk8cyn4qrd6wifwqfx8mzrc-go-containerregistry-0.20.0-gcrane"
+            }
+          ],
+          "store_path": "/nix/store/x5j4k9vd2bl7q72kkcf9cqdl11l6chcb-go-containerregistry-0.20.0-crane"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "crane",
+              "path": "/nix/store/9ldaaz8z7gpji6phwgaa94klcyf3dsc3-go-containerregistry-0.20.0-crane",
+              "default": true
+            },
+            {
+              "name": "out",
+              "path": "/nix/store/a35ib6j2qv2nmnfrv71kcyb9gwrgrrip-go-containerregistry-0.20.0",
+              "default": true
+            },
+            {
+              "name": "gcrane",
+              "path": "/nix/store/7wk2j4zk5p7r5v878qi1p2ywyykh3yrg-go-containerregistry-0.20.0-gcrane"
+            }
+          ],
+          "store_path": "/nix/store/9ldaaz8z7gpji6phwgaa94klcyf3dsc3-go-containerregistry-0.20.0-crane"
+        }
+      }
+    },
+    "ko@latest": {
+      "last_modified": "2024-07-20T09:11:00Z",
+      "resolved": "github:NixOS/nixpkgs/6e14bbce7bea6c4efd7adfa88a40dac750d80100#ko",
+      "source": "devbox-search",
+      "version": "0.15.4",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/55z0jl9gi5x88sdy4ml89dpz76ixhf2x-ko-0.15.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/55z0jl9gi5x88sdy4ml89dpz76ixhf2x-ko-0.15.4"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/amyq0brnkx8j3920zic62qaz5gnjlwlv-ko-0.15.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/amyq0brnkx8j3920zic62qaz5gnjlwlv-ko-0.15.4"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/n5a16q3llcz19rpyqb072z5spkcvlp94-ko-0.15.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/n5a16q3llcz19rpyqb072z5spkcvlp94-ko-0.15.4"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/5klg0yk9h2agipzk9ahyic9vbhag8lvm-ko-0.15.4",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/5klg0yk9h2agipzk9ahyic9vbhag8lvm-ko-0.15.4"
+        }
+      }
+    },
+    "mage@latest": {
+      "last_modified": "2024-07-20T09:11:00Z",
+      "resolved": "github:NixOS/nixpkgs/6e14bbce7bea6c4efd7adfa88a40dac750d80100#mage",
+      "source": "devbox-search",
+      "version": "1.15.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/bwiixaazhzbnf4048ahgsarm03pxb176-mage-1.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/bwiixaazhzbnf4048ahgsarm03pxb176-mage-1.15.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/v2mckbrzvw7ghkyybnzdhivlpdz40vzx-mage-1.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/v2mckbrzvw7ghkyybnzdhivlpdz40vzx-mage-1.15.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/zp369ky28i8pfq94fr0wxi0cmnr8np8s-mage-1.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/zp369ky28i8pfq94fr0wxi0cmnr8np8s-mage-1.15.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ypz0gfbvnbbia7ix95m82ncpaaxwqjid-mage-1.15.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ypz0gfbvnbbia7ix95m82ncpaaxwqjid-mage-1.15.0"
+        }
+      }
+    }
+  }
+}
