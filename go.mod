@@ -1,4 +1,4 @@
-module bbfsserver
+module github.com/myhops/bbfsserver
 
 go 1.22.5
 

@@ -15,8 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"bbfsserver/cache"
-	"bbfsserver/handlers"
+	"github.com/myhops/bbfsserver/cache"
+	"github.com/myhops/bbfsserver/handlers"
 
 	"github.com/myhops/bbfs"
 
