@@ -68,11 +68,11 @@ func compareTags(t1, t2 []string) int {
 }
 
 func getPollInterval(interval string) time.Duration {
-	res := 5*time.Minute
+	res := 5 * time.Minute
 	if interval == "" {
 		return res
 	}
-	i, err := time.ParseDuration(interval);
+	i, err := time.ParseDuration(interval)
 	if err != nil {
 		return res
 	}
@@ -93,7 +93,7 @@ func (o *options) fromEnv() {
 	setFromEnv("BBFSSRV_LOG_FORMAT", &o.logFormat)
 
 	o.tagsPollInterval = getPollInterval(os.Getenv("BBFSSRV_TAG_POLL_INTERVAL"))
-	
+
 	// fix listen address if needed.
 	if o.listenAddress[0] != ':' {
 		o.listenAddress = ":" + o.listenAddress
@@ -143,7 +143,7 @@ func run(args []string) error {
 	}
 
 	vfsh := newVersionFileServerFS(cfg, logger)
-	settableVfsh := handlers.NewSettable(vfsh)
+	settableVfsh := handlers.NewSettable(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt, syscall.SIGTERM)
@@ -156,7 +156,7 @@ func run(args []string) error {
 
 	// create the server
 	server := http.Server{
-		Handler:           LogRequestMiddleware(cache.CachingHandler(settableVfsh.ServeHTTP, 10_000), logger),
+		Handler:           LogRequestMiddleware(settableVfsh.ServeHTTP, logger),
 		Addr:              opts.listenAddress,
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       baseContext,
@@ -164,6 +164,7 @@ func run(args []string) error {
 	// Start the server in the background
 	go func() {
 		logger := logger.With("goroutine", "listen and serve")
+		logger.Info("starting server")
 		if err := server.ListenAndServe(); err != nil {
 			logger.Error("error", "error", err.Error())
 		}
@@ -174,14 +175,14 @@ func run(args []string) error {
 	go func() {
 		logger := logger.With("goroutine", "tag checker")
 		// Check every 5 minutes
-		tick := time.NewTicker(newTagPollingInterval)
+		tick := time.NewTicker(opts.tagsPollInterval)
 		for {
 			select {
 			case <-ctx.Done():
 				logger.Info("done received")
 				return
 			case <-tick.C:
-				logger.Info("")
+				logger.Info("checking for new tags")
 				t1, err := getTags(cfg, logger)
 				if err != nil {
 					break
