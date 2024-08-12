@@ -21,6 +21,9 @@ Environment variables
     BBFSSRV_REPOSITORY_SLUG     Bitbucket repository name
     BBFSSRV_ACCESS_KEY          Bitbucket http access key for the repo or project
     BBFSSRV_LOG_FORMAT          log format [ text | json], defaults to json
+    BBFSSRV_TAG_POLL_INTERVAL   Polling interval, format is what time.ParseDuration accepts,
+                                if the input is invalid, then the pollng interval is the default, 5m (5 minutes)
+                                Examples: 5 minutes => 5m, 10 seconds => 10s
 ```
 
 ## Used tools
