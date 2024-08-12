@@ -35,6 +35,7 @@ func writeEntry(w http.ResponseWriter, e *entry) {
 	w.Write(e.body)
 }
 
+// CachingHandler returns a new handler that wraps next and caches each request
 func CachingHandler(next http.HandlerFunc, size int) http.HandlerFunc {
 	logger := slog.Default().With(
 		slog.String("handler", "CachingHandler"),
