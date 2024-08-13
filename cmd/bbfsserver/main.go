@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net"
@@ -55,8 +56,8 @@ func defaultOptions() *options {
 	}
 }
 
-func setFromEnv(key string, val *string) {
-	if v := os.Getenv(key); v != "" {
+func setIfSet(v string, val *string) {
+	if v != "" {
 		*val = v
 	}
 }
@@ -68,7 +69,7 @@ func compareTags(t1, t2 []string) int {
 }
 
 func getPollInterval(interval string) time.Duration {
-	res := 5 * time.Minute
+	res := newTagPollingInterval
 	if interval == "" {
 		return res
 	}
@@ -83,14 +84,14 @@ func getPollInterval(interval string) time.Duration {
 	return res
 }
 
-func (o *options) fromEnv() {
-	setFromEnv("PORT", &o.listenAddress)
-	setFromEnv("BBFSSRV_LISTEN_ADDRESS", &o.listenAddress)
-	setFromEnv("BBFSSRV_HOST", &o.host)
-	setFromEnv("BBFSSRV_PROJECT_KEY", &o.projectKey)
-	setFromEnv("BBFSSRV_REPOSITORY_SLUG", &o.repositorySlug)
-	setFromEnv("BBFSSRV_ACCESS_KEY", &o.accessKey)
-	setFromEnv("BBFSSRV_LOG_FORMAT", &o.logFormat)
+func (o *options) fromEnv(getenv func(string) string) {
+	setIfSet(getenv("PORT"), &o.listenAddress)
+	setIfSet(getenv("BBFSSRV_LISTEN_ADDRESS"), &o.listenAddress)
+	setIfSet(getenv("BBFSSRV_HOST"), &o.host)
+	setIfSet(getenv("BBFSSRV_PROJECT_KEY"), &o.projectKey)
+	setIfSet(getenv("BBFSSRV_REPOSITORY_SLUG"), &o.repositorySlug)
+	setIfSet(getenv("BBFSSRV_ACCESS_KEY"), &o.accessKey)
+	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
 
 	o.tagsPollInterval = getPollInterval(os.Getenv("BBFSSRV_TAG_POLL_INTERVAL"))
 
@@ -112,15 +113,20 @@ func LogRequestMiddleware(next http.HandlerFunc, logger *slog.Logger) http.Handl
 	}
 }
 
-func run(args []string) error {
+func run(
+	ctx context.Context,
+	args []string,
+	getenv func(string) string,
+	stderr io.Writer,
+) error {
 	if len(args) > 1 && args[1] == "-h" {
 		fmt.Println(usageText)
 		return nil
 	}
 	opts := defaultOptions()
-	opts.fromEnv()
+	opts.fromEnv(getenv)
 
-	initLogger(opts.logFormat)
+	initLogger(opts.logFormat, stderr)
 
 	logger := slog.Default()
 
@@ -214,10 +220,9 @@ func run(args []string) error {
 	return nil
 }
 
-func initLogger(logFormat string) {
+func initLogger(logFormat string, lw io.Writer) {
 	var lh slog.Handler
 	ho := &slog.HandlerOptions{}
-	lw := os.Stderr
 	switch strings.ToLower(logFormat) {
 	case "text":
 		lh = slog.NewTextHandler(lw, ho)
@@ -229,5 +234,8 @@ func initLogger(logFormat string) {
 }
 
 func main() {
-	run(os.Args)
+	err := run(context.Background(), os.Args, os.Getenv, os.Stderr)
+	if err != nil {
+		log.Printf("run error: %s", err.Error())
+	}
 }

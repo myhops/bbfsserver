@@ -11,7 +11,6 @@ type Settable struct {
 	next  http.Handler
 }
 
-
 // ServeHTTP makes Settable an http.Handler
 func (h *Settable) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.rwMtx.RLock()
