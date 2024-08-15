@@ -3,7 +3,8 @@
   "packages": [
     "ko@latest",
     "mage@latest",
-    "crane@latest"
+    "crane@latest",
+    "tailwindcss@latest"
   ],
   "shell": {
     "init_hook": [

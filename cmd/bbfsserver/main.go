@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net"
@@ -39,6 +40,12 @@ func setMaxProcs() {
 //go:embed resources/usage.txt
 var usageText string
 
+//go:embed resources/web/index.html
+var indexHtmlTemplate string
+
+//go:embed resources/web
+var rootHtmlFS embed.FS
+
 type options struct {
 	host             string
 	logFormat        string
@@ -47,6 +54,7 @@ type options struct {
 	repositorySlug   string
 	accessKey        string
 	tagsPollInterval time.Duration
+	dryRun           string
 }
 
 func defaultOptions() *options {
@@ -92,8 +100,9 @@ func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("BBFSSRV_REPOSITORY_SLUG"), &o.repositorySlug)
 	setIfSet(getenv("BBFSSRV_ACCESS_KEY"), &o.accessKey)
 	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
+	setIfSet(getenv("BBFSSRV_DRY_RUN"), &o.dryRun)
 
-	o.tagsPollInterval = getPollInterval(os.Getenv("BBFSSRV_TAG_POLL_INTERVAL"))
+	o.tagsPollInterval = getPollInterval(getenv("BBFSSRV_TAG_POLL_INTERVAL"))
 
 	// fix listen address if needed.
 	if o.listenAddress[0] != ':' {
@@ -110,6 +119,37 @@ func LogRequestMiddleware(next http.HandlerFunc, logger *slog.Logger) http.Handl
 		}(time.Now())
 
 		next(w, r)
+	}
+}
+
+// getIndexPageInfo returns the
+func getIndexPageInfo(
+	title string,
+	projectKey string,
+	repositorySlug string,
+) func() (*IndexPageInfo, error) {
+	return func() (*IndexPageInfo, error) {
+		res := &IndexPageInfo{
+			Title:          title,
+			ProjectKey:     projectKey,
+			RepositorySlug: repositorySlug,
+			Versions: []struct {
+				Name string
+				Path string
+			}{
+				{
+
+					Name: "tag1",
+					Path: "https://www.google.com",
+				},
+				{
+
+					Name: "tag2",
+					Path: "https://www.booking.com",
+				},
+			},
+		}
+		return res, nil
 	}
 }
 
@@ -148,7 +188,27 @@ func run(
 		AccessKey:      opts.accessKey,
 	}
 
-	vfsh := newVersionFileServerFS(cfg, logger)
+	getinfo := getIndexPageInfo(
+		"OLO KOR Build Reports",
+		opts.projectKey,
+		opts.repositorySlug,
+	)
+
+	tags := []string{"testtag1", "testtag2"}
+	if opts.dryRun != "true" {
+		t, err := getTags(cfg, logger)
+		if err != nil {
+			return fmt.Errorf("error getting tags: %w", err)
+		}
+		tags = t
+	}
+
+	webFS, err := fs.Sub(rootHtmlFS, "resources")
+	if err != nil {
+		return fmt.Errorf("error creating resources/web sub fs: %w", err)
+	}
+
+	vfsh := newVersionFileServerFS(cfg, logger, tags, webFS, indexHtmlTemplate, getinfo)
 	settableVfsh := handlers.NewSettable(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
@@ -196,7 +256,7 @@ func run(
 				if compareTags(t1, vfsh.getTags()) == 0 {
 					break
 				}
-				vfsh = newVersionFileServerFS(cfg, logger)
+				vfsh = newVersionFileServerFS(cfg, logger, t1, webFS, indexHtmlTemplate, getinfo)
 				settableVfsh.Set(vfsh)
 			}
 		}
@@ -212,7 +272,7 @@ func run(
 	// shutdown the server and wait for 10 seconds
 	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err := server.Shutdown(sctx)
+	err = server.Shutdown(sctx)
 	if err != nil {
 		return fmt.Errorf("shutdown failed: %w", err)
 	}
@@ -234,6 +294,11 @@ func initLogger(logFormat string, lw io.Writer) {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered error in main: %v", r)
+		}
+	}()
 	err := run(context.Background(), os.Args, os.Getenv, os.Stderr)
 	if err != nil {
 		log.Printf("run error: %s", err.Error())
