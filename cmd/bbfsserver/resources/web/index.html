@@ -14,32 +14,44 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>{{.Title}}</title>
     <meta name="description" content="">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
-        integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
+    <link href="/web/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body class="font-mono">
+<body>
     <!--[if lt IE 7]>
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
-        <![endif]-->
+    <![endif]-->
 
-    <div class="pure-g">
-        <div class="pure-u-1"><a class="" href="{{.BitbucketURL}}">Bitbucket Repository</a></div>
-        <div class="pure-u-1">Project: {{.ProjectKey}}</div>
-        <div class="pure-u-1">Repository: {{.RepositorySlug}}</div>
-    </div>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">BBFS Server</a>
+        </div>
+    </nav>
 
-    <div class="pure-g">
-        <div >Versions</div>
-        <ul >
-            {{range .Versions}}
-            <li><a href="{{.Path}}">{{.Name}}</a></li>
-            {{end}}
-        </ul>
-    </div>
+    <main class="container">
+        <div class="bg-light p-5 rounded">
+            <h1>{{.Title}}</h1>
+            <p class="lead">Access all build reports for olo-kor-eb-service</p>
+            <div class="pt-2">
+                <h2>Versions</h2>
+                <div class="list-group">
+                    <a href="/all/" class="list-group-item list-group-item-action">HEAD</a>
+                    {{ range .Versions }}
+                        <a href="{{ .Path }}" class="list-group-item list-group-item-action">{{ .Name }}</a>
+                    {{ end }}
+                </div>
+            </div>
+            <div class="d-flex justify-content-end pt-3">
+                <a class="position-absolute btn btn-light float-end" href="{{.BitbucketURL}}" role="button">Go to Repository &raquo;</a>
+            </div>
+        </div>
+    </main>
 
-    </div>
+    <script src="/web/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
 </body>
 
 </html>
