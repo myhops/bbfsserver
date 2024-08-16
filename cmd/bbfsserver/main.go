@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"slices"
@@ -127,49 +128,37 @@ func getIndexPageInfo(
 	title string,
 	projectKey string,
 	repositorySlug string,
+	tags []string,
 ) func() (*IndexPageInfo, error) {
+	url := &url.URL{
+		Path: "/",
+	}
+	var versions []struct {
+		Name string
+		Path string
+	}
+	for _, tag := range tags {
+		parts := strings.Split(tag, "/")
+		module := ""
+		if len(parts) == 2 {
+			module = parts[0]
+		}
+		v := struct {
+			Name string
+			Path string
+		}{
+			Name: tag,
+			Path: url.JoinPath(tag, module, "/").String(),
+		}
+		versions = append(versions, v)
+	}
+
 	return func() (*IndexPageInfo, error) {
 		res := &IndexPageInfo{
 			Title:          title,
 			ProjectKey:     projectKey,
 			RepositorySlug: repositorySlug,
-			Versions: []struct {
-				Name string
-				Path string
-			}{
-				{
-					Name: "tag1",
-					Path: "https://www.google.com",
-				},
-				{
-					Name: "tag2",
-					Path: "https://www.booking.com",
-				},
-				{
-					Name: "tag1",
-					Path: "https://www.google.com",
-				},
-				{
-					Name: "tag2",
-					Path: "https://www.booking.com",
-				},
-				{
-					Name: "tag1",
-					Path: "https://www.google.com",
-				},
-				{
-					Name: "tag2",
-					Path: "https://www.booking.com",
-				},
-				{
-					Name: "tag1",
-					Path: "https://www.google.com",
-				},
-				{
-					Name: "tag2",
-					Path: "https://www.booking.com",
-				},
-			},
+			Versions:       versions,
 		}
 		return res, nil
 	}
@@ -210,13 +199,7 @@ func run(
 		AccessKey:      opts.accessKey,
 	}
 
-	getinfo := getIndexPageInfo(
-		"OLO KOR Build Reports",
-		opts.projectKey,
-		opts.repositorySlug,
-	)
-
-	tags := []string{"testtag1", "testtag2"}
+	tags := []string{"testtag1", "testtag2/v1"}
 	if opts.dryRun != "true" {
 		t, err := getTags(cfg, logger)
 		if err != nil {
@@ -224,6 +207,13 @@ func run(
 		}
 		tags = t
 	}
+
+	getinfo := getIndexPageInfo(
+		"OLO KOR Build Reports",
+		opts.projectKey,
+		opts.repositorySlug,
+		tags,
+	)
 
 	webFS, err := fs.Sub(staticHtmlFS, "resources/web")
 	if err != nil {
