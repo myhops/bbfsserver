@@ -131,7 +131,7 @@ func getIndexPageInfo(
 	tags []string,
 ) func() (*IndexPageInfo, error) {
 	url := &url.URL{
-		Path: "/",
+		Path: "/versions",
 	}
 	var versions []struct {
 		Name string
