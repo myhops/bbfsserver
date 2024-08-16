@@ -44,7 +44,7 @@ var usageText string
 var indexHtmlTemplate string
 
 //go:embed resources/web
-var rootHtmlFS embed.FS
+var staticHtmlFS embed.FS
 
 type options struct {
 	host             string
@@ -138,12 +138,34 @@ func getIndexPageInfo(
 				Path string
 			}{
 				{
-
 					Name: "tag1",
 					Path: "https://www.google.com",
 				},
 				{
-
+					Name: "tag2",
+					Path: "https://www.booking.com",
+				},
+				{
+					Name: "tag1",
+					Path: "https://www.google.com",
+				},
+				{
+					Name: "tag2",
+					Path: "https://www.booking.com",
+				},
+				{
+					Name: "tag1",
+					Path: "https://www.google.com",
+				},
+				{
+					Name: "tag2",
+					Path: "https://www.booking.com",
+				},
+				{
+					Name: "tag1",
+					Path: "https://www.google.com",
+				},
+				{
 					Name: "tag2",
 					Path: "https://www.booking.com",
 				},
@@ -203,7 +225,7 @@ func run(
 		tags = t
 	}
 
-	webFS, err := fs.Sub(rootHtmlFS, "resources")
+	webFS, err := fs.Sub(staticHtmlFS, "resources/web")
 	if err != nil {
 		return fmt.Errorf("error creating resources/web sub fs: %w", err)
 	}

@@ -124,7 +124,7 @@ func (h *versionFileServerFS) routes(webFS fs.FS, indexTemplate string, getinfo 
 	h.addVersionRoutes(pathVersions)
 	h.addAllHandler(pathAll)
 	h.serveMux.Handle("GET /", h.indexPageHandler(indexTemplate, getinfo))
-	h.serveMux.Handle("GET /web/", http.FileServerFS(webFS))
+	h.serveMux.Handle("GET /static/", http.FileServerFS(webFS))
 }
 
 type IndexPageInfo struct {

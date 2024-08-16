@@ -70,7 +70,7 @@ func TestDryRun(t *testing.T) {
 	cfg := &bbfs.Config{}
 	logger := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
 	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1")
-	h := newVersionFileServerFS(cfg, logger, []string{"tag1"}, rootHtmlFS, indexHtmlTemplate, getinfo)
+	h := newVersionFileServerFS(cfg, logger, []string{"tag1"}, staticHtmlFS, indexHtmlTemplate, getinfo)
 
 	srv := httptest.NewServer(h)
 	defer srv.Close()

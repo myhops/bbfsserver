@@ -18,7 +18,7 @@ func TestIndexPage(t *testing.T) {
 	tags := []string{"tag1", "tag2"}
 	cfg := &bbfs.Config{}
 	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1")
-	srv := newVersionFileServerFS(cfg, logger, tags, rootHtmlFS, indexHtmlTemplate, getinfo)
+	srv := newVersionFileServerFS(cfg, logger, tags, staticHtmlFS, indexHtmlTemplate, getinfo)
 	h := srv.indexPageHandler(indexHtmlTemplate, getinfo)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -40,7 +40,7 @@ func TestIndexPageWithServer(t *testing.T) {
 	tags := []string{"tag1", "tag2"}
 	cfg := &bbfs.Config{}
 	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1")
-	h := newVersionFileServerFS(cfg, logger, tags, rootHtmlFS, indexHtmlTemplate, getinfo)
+	h := newVersionFileServerFS(cfg, logger, tags, staticHtmlFS, indexHtmlTemplate, getinfo)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 	u := srv.URL
