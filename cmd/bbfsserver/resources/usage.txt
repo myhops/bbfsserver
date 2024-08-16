@@ -14,3 +14,4 @@ Environment variables
                                 if the input is invalid, then the polling interval is the 
                                 default, 5m (5 minutes)
                                 Examples: 5 minutes => 5m, 10 seconds => 10s
+    BBFSSRV_DRY_RUN             Set to true to run with made up values running on localhost:8080

@@ -8,4 +8,4 @@ export BBFSSRV_LOG_FORMAT=text
 export BBFSSRV_ACCESS_KEY=$(gopass --password private/olo-kor-build-reports/access-token/test-bbfs)
 
 WDIR=$(dirname ${BASH_SOURCE[0]})
-go run $WDIR/../cmd/bbfsserver
+go run $WDIR/../cmd/bbfsserver "$@"

@@ -9,4 +9,4 @@ export BBFSSRV_LOG_FORMAT=text
 export BBFSSRV_DRY_RUN=true
 
 WDIR=$(dirname ${BASH_SOURCE[0]})
-go run $WDIR/../cmd/bbfsserver
+go run $WDIR/../cmd/bbfsserver "$@"
