@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/myhops/bbfs"
+	"github.com/myhops/bbfsserver/server"
 )
 
 func testGetOptionsFromEnvGetenv(key string) string {
@@ -70,7 +71,7 @@ func TestDryRun(t *testing.T) {
 	cfg := &bbfs.Config{}
 	logger := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
 	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1", []string{"tag1"})
-	h := newVersionFileServerFS(cfg, logger, []string{"tag1"}, staticHtmlFS, indexHtmlTemplate, getinfo)
+	h := server.New(cfg, logger, []string{"tag1"}, staticHtmlFS, indexHtmlTemplate, getinfo)
 
 	srv := httptest.NewServer(h)
 	defer srv.Close()

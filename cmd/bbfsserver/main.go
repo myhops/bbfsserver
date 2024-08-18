@@ -20,6 +20,7 @@ import (
 
 	"github.com/myhops/bbfsserver/cache"
 	"github.com/myhops/bbfsserver/handlers"
+	"github.com/myhops/bbfsserver/server"
 
 	"github.com/myhops/bbfs"
 
@@ -129,7 +130,7 @@ func getIndexPageInfo(
 	projectKey string,
 	repositorySlug string,
 	tags []string,
-) func() (*IndexPageInfo, error) {
+) func() (*server.IndexPageInfo, error) {
 	url := &url.URL{
 		Path: "/versions",
 	}
@@ -153,8 +154,8 @@ func getIndexPageInfo(
 		versions = append(versions, v)
 	}
 
-	return func() (*IndexPageInfo, error) {
-		res := &IndexPageInfo{
+	return func() (*server.IndexPageInfo, error) {
+		res := &server.IndexPageInfo{
 			Title:          title,
 			ProjectKey:     projectKey,
 			RepositorySlug: repositorySlug,
@@ -220,7 +221,7 @@ func run(
 		return fmt.Errorf("error creating resources/web sub fs: %w", err)
 	}
 
-	vfsh := newVersionFileServerFS(cfg, logger, tags, webFS, indexHtmlTemplate, getinfo)
+	vfsh := server.New(cfg, logger, tags, webFS, indexHtmlTemplate, getinfo)
 	settableVfsh := handlers.NewSettable(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
@@ -233,7 +234,7 @@ func run(
 	}
 
 	// create the server
-	server := http.Server{
+	srv := http.Server{
 		Handler:           LogRequestMiddleware(settableVfsh.ServeHTTP, logger),
 		Addr:              opts.listenAddress,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -243,7 +244,7 @@ func run(
 	go func() {
 		logger := logger.With("goroutine", "listen and serve")
 		logger.Info("starting server")
-		if err := server.ListenAndServe(); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			logger.Error("error", "error", err.Error())
 		}
 		logger.Info("server stopped")
@@ -265,10 +266,10 @@ func run(
 				if err != nil {
 					break
 				}
-				if compareTags(t1, vfsh.getTags()) == 0 {
+				if compareTags(t1, vfsh.GetTags()) == 0 {
 					break
 				}
-				vfsh = newVersionFileServerFS(cfg, logger, t1, webFS, indexHtmlTemplate, getinfo)
+				vfsh = server.New(cfg, logger, t1, webFS, indexHtmlTemplate, getinfo)
 				settableVfsh.Set(vfsh)
 			}
 		}
@@ -284,7 +285,7 @@ func run(
 	// shutdown the server and wait for 10 seconds
 	sctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	err = server.Shutdown(sctx)
+	err = srv.Shutdown(sctx)
 	if err != nil {
 		return fmt.Errorf("shutdown failed: %w", err)
 	}

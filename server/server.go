@@ -1,18 +1,15 @@
-package main
+package server
 
 import (
-	"context"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"sync"
 
 	"github.com/myhops/bbfs"
-	"github.com/myhops/bbfs/bbclient/server"
 )
 
 const (
@@ -20,7 +17,7 @@ const (
 	pathAll      = "/all"
 )
 
-type versionFileServerFS struct {
+type Server struct {
 	serveMux        http.ServeMux
 	fsCfg           *bbfs.Config
 	rootHandler     http.Handler
@@ -31,49 +28,26 @@ type versionFileServerFS struct {
 	tags      []string
 }
 
-func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
-	u := url.URL{
-		Scheme: "https",
-		Host:   cfg.Host,
-		Path:   filepath.Join(bbfs.ApiPath, bbfs.DefaultVersion),
-	}
-
-	// Find the valid tags
-	client := server.Client{
-		BaseURL:   u.String(),
-		AccessKey: server.SecretString(cfg.AccessKey),
-		Logger:    logger,
-	}
-	tags, err := client.GetTags(context.Background(), &server.GetTagsCommand{
-		ProjectKey: cfg.ProjectKey,
-		RepoSlug:   cfg.RepositorySlug,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return tags, nil
-}
-
-func (h *versionFileServerFS) getTags() []string {
-	return h.tags
+func (s *Server) GetTags() []string {
+	return s.tags
 }
 
 func setCacheControlNoCache(header http.Header) {
 	header.Set("Cache-Control", "no-cache")
 }
 
-func newVersionFileServerFS(
+func New(
 	cfg *bbfs.Config,
 	logger *slog.Logger,
 	tags []string,
 	webFS fs.FS,
 	indexTemplate string,
 	getInfo func() (*IndexPageInfo, error),
-) *versionFileServerFS {
+) *Server {
 
 	logger.Info("found tags", slog.Any("tags", tags))
 
-	h := &versionFileServerFS{
+	s := &Server{
 		fsCfg:           cfg,
 		serveMux:        *http.NewServeMux(),
 		versionHandlers: map[string]http.Handler{},
@@ -81,50 +55,50 @@ func newVersionFileServerFS(
 		rootHandler:     http.FileServerFS(bbfs.NewFS(cfg, bbfs.WithLogger(logger))),
 		tags:            tags,
 	}
-	h.routes(webFS, indexTemplate, getInfo)
+	s.routes(webFS, indexTemplate, getInfo)
 
-	return h
+	return s
 }
 
-func (h *versionFileServerFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setCacheControlNoCache(w.Header())
-	h.serveMux.ServeHTTP(w, r)
+	s.serveMux.ServeHTTP(w, r)
 }
 
-func (h *versionFileServerFS) addVersionRoute(prefix string, tag string) {
+func (s *Server) addVersionRoute(prefix string, tag string) {
 	// Create fs with version.
-	nfsCfg := *h.fsCfg
+	nfsCfg := *s.fsCfg
 	nfsCfg.At = tag
-	nfs := bbfs.NewFS(&nfsCfg, bbfs.WithLogger(h.logger))
-	// create the path.
+	nfs := bbfs.NewFS(&nfsCfg, bbfs.WithLogger(s.logger))
+	// create the pats.
 	p, _ := url.JoinPath(prefix, tag, "/")
 	// add the handler to the serve mux
-	h.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
-	h.logger.Info("added version handler", "path", p)
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
+	s.logger.Info("added version handler", "path", p)
 }
 
-func (h *versionFileServerFS) addVersionRoutes(prefix string) {
-	h.tagsMutex.Lock()
-	defer h.tagsMutex.Unlock()
-	for _, tag := range h.tags {
-		h.addVersionRoute(prefix, tag)
+func (s *Server) addVersionRoutes(prefix string) {
+	s.tagsMutex.Lock()
+	defer s.tagsMutex.Unlock()
+	for _, tag := range s.tags {
+		s.addVersionRoute(prefix, tag)
 	}
 }
 
-func (h *versionFileServerFS) addAllHandler(prefix string) {
-	logger := h.logger.With(slog.String("handler", "addAllHandler"))
-	nfs := bbfs.NewFS(h.fsCfg, bbfs.WithLogger(h.logger))
+func (s *Server) addAllHandler(prefix string) {
+	logger := s.logger.With(slog.String("handler", "addAllHandler"))
+	nfs := bbfs.NewFS(s.fsCfg, bbfs.WithLogger(s.logger))
 	p, _ := url.JoinPath(prefix, "/")
-	h.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
 	logger.Info("added unversioned handler", "path", p)
 }
 
-func (h *versionFileServerFS) routes(webFS fs.FS, indexTemplate string, getinfo func() (*IndexPageInfo, error)) {
+func (s *Server) routes(webFS fs.FS, indexTemplate string, getinfo func() (*IndexPageInfo, error)) {
 	// Create the paths for the tags, if any.
-	h.addVersionRoutes(pathVersions)
-	h.addAllHandler(pathAll)
-	h.serveMux.Handle("GET /", h.indexPageHandler(indexTemplate, getinfo))
-	h.serveMux.Handle("GET /static/", http.FileServerFS(webFS))
+	s.addVersionRoutes(pathVersions)
+	s.addAllHandler(pathAll)
+	s.serveMux.Handle("GET /", s.indexPageHandler(indexTemplate, getinfo))
+	s.serveMux.Handle("GET /static/", http.FileServerFS(webFS))
 }
 
 type IndexPageInfo struct {
@@ -139,8 +113,8 @@ type IndexPageInfo struct {
 }
 
 // handleIndexPage shows a welcome page with
-func (h *versionFileServerFS) indexPageHandler(tpl string, getInfo func() (*IndexPageInfo, error)) http.Handler {
-	logger := h.logger.With(slog.String("handler", "handleIndexPage"))
+func (s *Server) indexPageHandler(tpl string, getInfo func() (*IndexPageInfo, error)) http.Handler {
+	logger := s.logger.With(slog.String("handler", "handleIndexPage"))
 	// Load the template file and parse it
 	t := template.New("index")
 	t, err := t.Parse(tpl)
