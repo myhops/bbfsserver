@@ -216,9 +216,9 @@ func run(
 		tags,
 	)
 
-	webFS, err := fs.Sub(resources.StaticHtmlFS, "resources/web")
+	webFS, err := fs.Sub(resources.StaticHtmlFS, "web")
 	if err != nil {
-		return fmt.Errorf("error creating resources/web sub fs: %w", err)
+		return fmt.Errorf("error creating web sub fs: %w", err)
 	}
 
 	vfsh := server.New(cfg, logger, tags, webFS, resources.IndexHtmlTemplate, getinfo)
