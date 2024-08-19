@@ -56,6 +56,7 @@ type options struct {
 	accessKey        string
 	tagsPollInterval time.Duration
 	dryRun           string
+	repoURL          string
 }
 
 func defaultOptions() *options {
@@ -102,6 +103,7 @@ func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("BBFSSRV_ACCESS_KEY"), &o.accessKey)
 	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
 	setIfSet(getenv("BBFSSRV_DRY_RUN"), &o.dryRun)
+	setIfSet(getenv("BBFSSRV_REPO_URL"), &o.repoURL)
 
 	o.tagsPollInterval = getPollInterval(getenv("BBFSSRV_TAG_POLL_INTERVAL"))
 
@@ -125,6 +127,7 @@ func LogRequestMiddleware(next http.HandlerFunc, logger *slog.Logger) http.Handl
 
 // getIndexPageInfo returns the
 func getIndexPageInfo(
+	bitbucketURL string,
 	title string,
 	projectKey string,
 	repositorySlug string,
@@ -155,6 +158,7 @@ func getIndexPageInfo(
 
 	return func() (*IndexPageInfo, error) {
 		res := &IndexPageInfo{
+			BitbucketURL:   bitbucketURL,
 			Title:          title,
 			ProjectKey:     projectKey,
 			RepositorySlug: repositorySlug,
@@ -209,6 +213,7 @@ func run(
 	}
 
 	getinfo := getIndexPageInfo(
+		opts.repoURL,
 		"OLO KOR Build Reports",
 		opts.projectKey,
 		opts.repositorySlug,
