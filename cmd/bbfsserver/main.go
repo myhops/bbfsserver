@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"embed"
+	_ "embed"
 	"fmt"
 	"io"
 	"io/fs"
@@ -20,6 +20,7 @@ import (
 
 	"github.com/myhops/bbfsserver/cache"
 	"github.com/myhops/bbfsserver/handlers"
+	"github.com/myhops/bbfsserver/resources"
 	"github.com/myhops/bbfsserver/server"
 
 	"github.com/myhops/bbfs"
@@ -39,14 +40,8 @@ func setMaxProcs() {
 	maxprocs.Set(maxprocs.Logger(pf))
 }
 
-//go:embed resources/usage.txt
+//go:embed usage.txt
 var usageText string
-
-//go:embed resources/web/index.html
-var indexHtmlTemplate string
-
-//go:embed resources/web
-var staticHtmlFS embed.FS
 
 type options struct {
 	host             string
@@ -57,6 +52,7 @@ type options struct {
 	accessKey        string
 	tagsPollInterval time.Duration
 	dryRun           string
+	repoURL          string
 }
 
 func defaultOptions() *options {
@@ -103,6 +99,7 @@ func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("BBFSSRV_ACCESS_KEY"), &o.accessKey)
 	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
 	setIfSet(getenv("BBFSSRV_DRY_RUN"), &o.dryRun)
+	setIfSet(getenv("BBFSSRV_REPO_URL"), &o.repoURL)
 
 	o.tagsPollInterval = getPollInterval(getenv("BBFSSRV_TAG_POLL_INTERVAL"))
 
@@ -126,6 +123,7 @@ func LogRequestMiddleware(next http.HandlerFunc, logger *slog.Logger) http.Handl
 
 // getIndexPageInfo returns the
 func getIndexPageInfo(
+	bitbucketURL string,
 	title string,
 	projectKey string,
 	repositorySlug string,
@@ -156,6 +154,7 @@ func getIndexPageInfo(
 
 	return func() (*server.IndexPageInfo, error) {
 		res := &server.IndexPageInfo{
+			BitbucketURL:   bitbucketURL,
 			Title:          title,
 			ProjectKey:     projectKey,
 			RepositorySlug: repositorySlug,
@@ -210,18 +209,19 @@ func run(
 	}
 
 	getinfo := getIndexPageInfo(
+		opts.repoURL,
 		"OLO KOR Build Reports",
 		opts.projectKey,
 		opts.repositorySlug,
 		tags,
 	)
 
-	webFS, err := fs.Sub(staticHtmlFS, "resources/web")
+	webFS, err := fs.Sub(resources.StaticHtmlFS, "resources/web")
 	if err != nil {
 		return fmt.Errorf("error creating resources/web sub fs: %w", err)
 	}
 
-	vfsh := server.New(cfg, logger, tags, webFS, indexHtmlTemplate, getinfo)
+	vfsh := server.New(cfg, logger, tags, webFS, resources.IndexHtmlTemplate, getinfo)
 	settableVfsh := handlers.NewSettable(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
@@ -269,7 +269,7 @@ func run(
 				if compareTags(t1, vfsh.GetTags()) == 0 {
 					break
 				}
-				vfsh = server.New(cfg, logger, t1, webFS, indexHtmlTemplate, getinfo)
+				vfsh = server.New(cfg, logger, t1, webFS, resources.IndexHtmlTemplate, getinfo)
 				settableVfsh.Set(vfsh)
 			}
 		}

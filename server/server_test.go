@@ -11,9 +11,11 @@ import (
 	"testing"
 
 	"github.com/myhops/bbfs"
+	"github.com/myhops/bbfsserver/resources"
 )
 
 func getIndexPageInfo(
+	repoURL string,
 	title string,
 	projectKey string,
 	repositorySlug string,
@@ -44,6 +46,7 @@ func getIndexPageInfo(
 
 	return func() (*IndexPageInfo, error) {
 		res := &IndexPageInfo{
+			BitbucketURL: repoURL,
 			Title:          title,
 			ProjectKey:     projectKey,
 			RepositorySlug: repositorySlug,
@@ -59,9 +62,9 @@ func TestIndexPage(t *testing.T) {
 
 	tags := []string{"tag1", "tag2"}
 	cfg := &bbfs.Config{}
-	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1", []string{"tag1"})
-	srv := New(cfg, logger, tags, staticHtmlFS, indexHtmlTemplate, getinfo)
-	h := srv.indexPageHandler(indexHtmlTemplate, getinfo)
+	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
+	srv := New(cfg, logger, tags, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo)
+	h := srv.indexPageHandler(resources.IndexHtmlTemplate, getinfo)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -81,8 +84,8 @@ func TestIndexPageWithServer(t *testing.T) {
 
 	tags := []string{"tag1", "tag2"}
 	cfg := &bbfs.Config{}
-	getinfo := getIndexPageInfo("Title", "Project 1", "Repo 1", []string{"tag1"})
-	h := New(cfg, logger, tags, staticHtmlFS, indexHtmlTemplate, getinfo)
+	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
+	h := New(cfg, logger, tags, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo)
 	srv := httptest.NewServer(h)
 	defer srv.Close()
 	u := srv.URL
