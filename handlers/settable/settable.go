@@ -1,4 +1,4 @@
-package handlers
+package settable
 
 import (
 	"net/http"
@@ -26,7 +26,7 @@ func (h *Settable) Set(next http.Handler) {
 }
 
 // NewSettable returns a new settable handler that wraps next
-func NewSettable(next http.Handler) *Settable {
+func New(next http.Handler) *Settable {
 	return &Settable{
 		next: next,
 	}

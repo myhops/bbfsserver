@@ -18,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/myhops/bbfsserver/cache"
-	"github.com/myhops/bbfsserver/handlers"
+	"github.com/myhops/bbfsserver/handlers/cache"
+	"github.com/myhops/bbfsserver/handlers/settable"
 	"github.com/myhops/bbfsserver/resources"
 	"github.com/myhops/bbfsserver/server"
 
@@ -222,7 +222,7 @@ func run(
 	}
 
 	vfsh := server.New(cfg, logger, tags, webFS, resources.IndexHtmlTemplate, getinfo)
-	settableVfsh := handlers.NewSettable(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
+	settableVfsh := settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt, syscall.SIGTERM)
