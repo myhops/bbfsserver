@@ -70,11 +70,13 @@ func TestGetOptionsFromEnv(t *testing.T) {
 func TestDryRun(t *testing.T) {
 	opts := &options{}
 	opts.fromEnv(dryRunGetOptionsFromEnvGetenv)
-	out := &bytes.Buffer{}
 	cfg := &bbfs.Config{}
+	out := &bytes.Buffer{}
 	logger := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
+	allFS := bbfs.NewFS(cfg)
+	versions := getDryRunVersions(cfg, logger)
 	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
-	h := server.New(cfg, logger, []string{"tag1"}, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo)
+	h := server.New(logger, allFS, versions, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
 
 	srv := httptest.NewServer(h)
 	defer srv.Close()
@@ -97,13 +99,15 @@ func TestDryRun(t *testing.T) {
 }
 
 func TestIndexPage(t *testing.T) {
+	opts := &options{}
+	opts.fromEnv(dryRunGetOptionsFromEnvGetenv)
+	cfg := &bbfs.Config{}
 	out := &bytes.Buffer{}
 	logger := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
-
-	cfg := &bbfs.Config{}
-	
+	allFS := bbfs.NewFS(cfg)
+	versions := getDryRunVersions(cfg, logger)
 	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
-	srv := server.New(logger, resources.StaticHtmlFS, getDryRunVersions(cfg, logger), resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo)
+	srv := server.New(logger, allFS, versions, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()

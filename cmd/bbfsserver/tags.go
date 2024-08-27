@@ -53,8 +53,7 @@ func getVersions(cfg *bbfs.Config, logger *slog.Logger) ([]*server.Version, erro
 }
 
 func getVersionsFromTags(cfg *bbfs.Config, logger *slog.Logger, tags []string) ([]*server.Version, error) {
-	var c *bbfs.Config
-	*c = *cfg
+	c := *cfg
 	cfg = nil // make sure we do not use it
 
 	res := make([]*server.Version, 0, len(tags))
@@ -63,7 +62,7 @@ func getVersionsFromTags(cfg *bbfs.Config, logger *slog.Logger, tags []string) (
 		c.At = tag
 		res = append(res, &server.Version{
 			Name: tag,
-			Dir:  bbfs.NewFS(c),
+			Dir:  bbfs.NewFS(&c),
 		})
 	}
 	return res, nil

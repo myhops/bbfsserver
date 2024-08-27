@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -21,11 +22,15 @@ type Version struct {
 }
 
 type Server struct {
-	serveMux    http.ServeMux
-	logger      *slog.Logger
-	all         fs.FS
-	versions    []*Version
-	timeToLive  time.Duration
+	serveMux http.ServeMux
+	logger   *slog.Logger
+	all      fs.FS
+	versions []*Version
+
+	// timeToLive
+	ttlMutex   sync.RWMutex
+	timeToLive time.Duration
+	startTime  time.Time
 }
 
 // Tags returns an iterator, go 1.23.0, just for the fun of it.
@@ -49,10 +54,6 @@ func (s *Server) GetVersionNames() []string {
 	return res
 }
 
-func setCacheControlNoCache(header http.Header) {
-	header.Set("Cache-Control", "no-cache")
-}
-
 func New(
 	// logger
 	logger *slog.Logger,
@@ -66,12 +67,16 @@ func New(
 	indexTemplate string,
 	// getInfo is a function that returns the struct that indexTemplate uses
 	getInfo func() (*IndexPageInfo, error),
+	// timeToLive sets the time the server is expected to run
+	timeToLive time.Duration,
 ) *Server {
 	s := &Server{
 		serveMux: *http.NewServeMux(),
 		logger:   logger,
 		all:      all,
 		versions: versions,
+		timeToLive: timeToLive,
+		startTime: time.Now(),
 	}
 	s.routes(webFS, indexTemplate, getInfo)
 
@@ -79,13 +84,13 @@ func New(
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	setCacheControlNoCache(w.Header())
+	s.setCacheControl(w.Header())
 	s.serveMux.ServeHTTP(w, r)
 }
 
 func (s *Server) addPrefixFSRoute(prefix string, version *Version) {
 	// create the path.
-	p, _ := url.JoinPath(prefix, "/")
+	p, _ := url.JoinPath(prefix, "/", version.Name, "/")
 	// add the handler to the serve mux
 	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(version.Dir)))
 	s.logger.Info("added prefix FS", "path", p)
@@ -158,4 +163,29 @@ func (s *Server) indexPageHandler(tpl string, getInfo func() (*IndexPageInfo, er
 	}
 
 	return http.HandlerFunc(f)
+}
+
+func (s *Server) setCacheControl(header http.Header) {
+	const cacheControl = "Cache-Control"
+
+	logger := s.logger.With(slog.String("server.method", "setCacheControl"))
+	s.ttlMutex.RLock()
+	maxAge := s.timeToLive - time.Since(s.startTime)
+	s.ttlMutex.RUnlock()
+	if maxAge < 0 {
+		maxAge = 0
+	}
+	val := fmt.Sprintf("max-age=%d", int64(maxAge.Seconds()))
+	header.Set(cacheControl, val)
+	logger.Info("set cache control", slog.String(cacheControl, val))
+}
+
+func (s *Server) ResetStartTime() {
+	logger := s.logger.With(slog.String("server.method", "ResetStartTime"))
+	
+	s.ttlMutex.Lock()
+	s.startTime = time.Now()
+	s.ttlMutex.Unlock()
+
+	logger.Info("start time reset", slog.Time("startTime", s.startTime))
 }

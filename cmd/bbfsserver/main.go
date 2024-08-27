@@ -230,7 +230,7 @@ func run(
 		return fmt.Errorf("error creating web sub fs: %w", err)
 	}
 
-	vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo)
+	vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
 	settableVfsh := settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
@@ -276,6 +276,7 @@ func run(
 					break
 				}
 				if compareTags(t1, vfsh.GetVersionNames()) == 0 {
+					vfsh.ResetStartTime()
 					break
 				}
 				versions, err := getVersions(cfg, logger)
@@ -283,8 +284,10 @@ func run(
 					logger.Error("error getting versions", "error", err.Error())
 					break
 				}
-				vfsh = server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo)
-				settableVfsh.Set(vfsh)
+				logger.Info("new tags found", slog.Any("tags", t1))
+				vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
+				settableVfsh = settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
+				logger.Info("set new server", slog.Any("tags", t1))
 			}
 		}
 	}()
