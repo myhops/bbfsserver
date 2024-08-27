@@ -7,9 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"sync"
-
-	"github.com/myhops/bbfs"
+	"time"
 )
 
 const (
@@ -17,19 +15,38 @@ const (
 	pathAll      = "/all"
 )
 
-type Server struct {
-	serveMux        http.ServeMux
-	fsCfg           *bbfs.Config
-	rootHandler     http.Handler
-	versionHandlers map[string]http.Handler
-	logger          *slog.Logger
-
-	tagsMutex sync.Mutex
-	tags      []string
+type Version struct {
+	Name string
+	Dir  fs.FS
 }
 
-func (s *Server) GetTags() []string {
-	return s.tags
+type Server struct {
+	serveMux    http.ServeMux
+	logger      *slog.Logger
+	all         fs.FS
+	versions    []*Version
+	timeToLive  time.Duration
+}
+
+// Tags returns an iterator, go 1.23.0, just for the fun of it.
+func (s *Server) Versions() func(yield func(string) bool) bool {
+	return func(yield func(string) bool) bool {
+		for _, t := range s.versions {
+			if !yield(t.Name) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// GetTags returns an array with the prefixes of the tags
+func (s *Server) GetVersionNames() []string {
+	res := make([]string, 0, len(s.versions))
+	for _, t := range s.versions {
+		res = append(res, t.Name)
+	}
+	return res
 }
 
 func setCacheControlNoCache(header http.Header) {
@@ -37,23 +54,24 @@ func setCacheControlNoCache(header http.Header) {
 }
 
 func New(
-	cfg *bbfs.Config,
+	// logger
 	logger *slog.Logger,
-	tags []string,
+	// all is the FS for the main branch
+	all fs.FS,
+	// versions is a list of Version, which contain the name of the ref and the FS
+	versions []*Version,
+	// webFS is the FS for the static files
 	webFS fs.FS,
+	// indexTemplate is the http/template for index.html
 	indexTemplate string,
+	// getInfo is a function that returns the struct that indexTemplate uses
 	getInfo func() (*IndexPageInfo, error),
 ) *Server {
-
-	logger.Info("found tags", slog.Any("tags", tags))
-
 	s := &Server{
-		fsCfg:           cfg,
-		serveMux:        *http.NewServeMux(),
-		versionHandlers: map[string]http.Handler{},
-		logger:          logger,
-		rootHandler:     http.FileServerFS(bbfs.NewFS(cfg, bbfs.WithLogger(logger))),
-		tags:            tags,
+		serveMux: *http.NewServeMux(),
+		logger:   logger,
+		all:      all,
+		versions: versions,
 	}
 	s.routes(webFS, indexTemplate, getInfo)
 
@@ -65,38 +83,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.serveMux.ServeHTTP(w, r)
 }
 
-func (s *Server) addVersionRoute(prefix string, tag string) {
-	// Create fs with version.
-	nfsCfg := *s.fsCfg
-	nfsCfg.At = tag
-	nfs := bbfs.NewFS(&nfsCfg, bbfs.WithLogger(s.logger))
-	// create the pats.
-	p, _ := url.JoinPath(prefix, tag, "/")
+func (s *Server) addPrefixFSRoute(prefix string, version *Version) {
+	// create the path.
+	p, _ := url.JoinPath(prefix, "/")
 	// add the handler to the serve mux
-	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
-	s.logger.Info("added version handler", "path", p)
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(version.Dir)))
+	s.logger.Info("added prefix FS", "path", p)
 }
 
 func (s *Server) addVersionRoutes(prefix string) {
-	s.tagsMutex.Lock()
-	defer s.tagsMutex.Unlock()
-	for _, tag := range s.tags {
-		s.addVersionRoute(prefix, tag)
+	for _, p := range s.versions {
+		s.addPrefixFSRoute(prefix, p)
 	}
 }
 
-func (s *Server) addAllHandler(prefix string) {
+func (s *Server) addAllRoute(prefix string, fs fs.FS) {
 	logger := s.logger.With(slog.String("handler", "addAllHandler"))
-	nfs := bbfs.NewFS(s.fsCfg, bbfs.WithLogger(s.logger))
 	p, _ := url.JoinPath(prefix, "/")
-	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(nfs)))
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(fs)))
 	logger.Info("added unversioned handler", "path", p)
 }
 
 func (s *Server) routes(webFS fs.FS, indexTemplate string, getinfo func() (*IndexPageInfo, error)) {
 	// Create the paths for the tags, if any.
 	s.addVersionRoutes(pathVersions)
-	s.addAllHandler(pathAll)
+	s.addAllRoute(pathAll, s.all)
 	s.serveMux.Handle("GET /", s.indexPageHandler(indexTemplate, getinfo))
 	s.serveMux.Handle("GET /static/", http.FileServerFS(webFS))
 }

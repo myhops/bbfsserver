@@ -164,6 +164,12 @@ func getIndexPageInfo(
 	}
 }
 
+func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version {
+	tags := []string{"testtag1", "testtag2/v1"}
+	res, _ := getVersionsFromTags(cfg, logger, tags)
+	return res
+}
+
 func run(
 	ctx context.Context,
 	args []string,
@@ -199,13 +205,16 @@ func run(
 		AccessKey:      opts.accessKey,
 	}
 
-	tags := []string{"testtag1", "testtag2/v1"}
+	allFS := bbfs.NewFS(cfg)
+
+	var versions []*server.Version
+	versions = getDryRunVersions(cfg, logger)
 	if opts.dryRun != "true" {
-		t, err := getTags(cfg, logger)
+		v, err := getVersions(cfg, logger)
 		if err != nil {
 			return fmt.Errorf("error getting tags: %w", err)
 		}
-		tags = t
+		versions = v
 	}
 
 	getinfo := getIndexPageInfo(
@@ -213,7 +222,7 @@ func run(
 		"OLO KOR Build Reports",
 		opts.projectKey,
 		opts.repositorySlug,
-		tags,
+		getTagsNil(cfg, logger),
 	)
 
 	webFS, err := fs.Sub(resources.StaticHtmlFS, "web")
@@ -221,7 +230,7 @@ func run(
 		return fmt.Errorf("error creating web sub fs: %w", err)
 	}
 
-	vfsh := server.New(cfg, logger, tags, webFS, resources.IndexHtmlTemplate, getinfo)
+	vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo)
 	settableVfsh := settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
 
 	// create context that catches kill and interrupt
@@ -266,10 +275,15 @@ func run(
 				if err != nil {
 					break
 				}
-				if compareTags(t1, vfsh.GetTags()) == 0 {
+				if compareTags(t1, vfsh.GetVersionNames()) == 0 {
 					break
 				}
-				vfsh = server.New(cfg, logger, t1, webFS, resources.IndexHtmlTemplate, getinfo)
+				versions, err := getVersions(cfg, logger)
+				if err != nil {
+					logger.Error("error getting versions", "error", err.Error())
+					break
+				}
+				vfsh = server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo)
 				settableVfsh.Set(vfsh)
 			}
 		}

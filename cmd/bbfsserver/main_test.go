@@ -95,3 +95,24 @@ func TestDryRun(t *testing.T) {
 	_ = bodys
 	t.Logf("status: %s", r.Status)
 }
+
+func TestIndexPage(t *testing.T) {
+	out := &bytes.Buffer{}
+	logger := slog.New(slog.NewTextHandler(out, &slog.HandlerOptions{}))
+
+	cfg := &bbfs.Config{}
+	
+	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
+	srv := server.New(logger, resources.StaticHtmlFS, getDryRunVersions(cfg, logger), resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, r)
+	body, err := io.ReadAll(w.Result().Body)
+	if err != nil {
+		t.Errorf("error reading body: %s", err.Error())
+	}
+	bodys := string(body)
+	_ = bodys
+	t.Logf("status: %s", w.Result().Status)
+}
