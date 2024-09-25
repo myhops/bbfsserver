@@ -170,10 +170,6 @@ func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version 
 	return res
 }
 
-func getTagsFilter(name string) bool {
-	return strings.Contains(name, "/")
-}
-
 func run(
 	ctx context.Context,
 	args []string,
@@ -226,7 +222,7 @@ func run(
 		"OLO KOR Build Reports",
 		opts.projectKey,
 		opts.repositorySlug,
-		getTagsNil(cfg, logger, getTagsFilter),
+		getTagsNil(cfg, logger),
 	)
 
 	webFS, err := fs.Sub(resources.StaticHtmlFS, "web")
@@ -275,7 +271,7 @@ func run(
 				return
 			case <-tick.C:
 				logger.Info("checking for new tags")
-				t1, err := getTags(cfg, logger, getTagsFilter)
+				t1, err := getTags(cfg, logger)
 				if err != nil {
 					break
 				}
