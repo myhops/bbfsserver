@@ -56,6 +56,7 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool)
 			logger.Info("skipped tag", slog.String("name", tag.Name), slog.String("type", tag.Type))
 			continue
 		}
+		logger.Info("adding tag", slog.String("name", tag.Name))
 		tags = append(tags, tag.Name)
 	}
 	return tags, nil
