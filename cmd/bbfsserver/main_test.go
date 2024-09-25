@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/myhops/bbfs"
+	"github.com/myhops/bbfsserver/handlers/cache"
 	"github.com/myhops/bbfsserver/resources"
 	"github.com/myhops/bbfsserver/server"
 )
@@ -76,7 +77,15 @@ func TestDryRun(t *testing.T) {
 	allFS := bbfs.NewFS(cfg)
 	versions := getDryRunVersions(cfg, logger)
 	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
-	h := server.New(logger, allFS, versions, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
+	h := server.New(
+		logger, 
+		allFS, 
+		versions, 
+		resources.StaticHtmlFS, 
+		resources.IndexHtmlTemplate, 
+		getinfo, opts.tagsPollInterval,
+		cache.Middleware(10_000),
+	)
 
 	srv := httptest.NewServer(h)
 	defer srv.Close()
@@ -107,7 +116,13 @@ func TestIndexPage(t *testing.T) {
 	allFS := bbfs.NewFS(cfg)
 	versions := getDryRunVersions(cfg, logger)
 	getinfo := getIndexPageInfo("repoURL", "Title", "Project 1", "Repo 1", []string{"tag1"})
-	srv := server.New(logger, allFS, versions, resources.StaticHtmlFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
+	srv := server.New(logger, 
+		allFS, 
+		versions, 
+		resources.StaticHtmlFS, 
+		resources.IndexHtmlTemplate, 
+		getinfo, opts.tagsPollInterval,
+		cache.Middleware(10_000))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()

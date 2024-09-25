@@ -31,6 +31,8 @@ type Server struct {
 	ttlMutex   sync.RWMutex
 	timeToLive time.Duration
 	startTime  time.Time
+
+	cacheMiddleware func(next http.Handler) http.Handler
 }
 
 // Tags returns an iterator, go 1.23.0, just for the fun of it.
@@ -69,14 +71,18 @@ func New(
 	getInfo func() (*IndexPageInfo, error),
 	// timeToLive sets the time the server is expected to run
 	timeToLive time.Duration,
+	// cacheMiddleware caches based on the path of the request
+	cacheMiddleware func(next http.Handler) http.Handler,
+
 ) *Server {
 	s := &Server{
-		serveMux: *http.NewServeMux(),
-		logger:   logger,
-		all:      all,
-		versions: versions,
-		timeToLive: timeToLive,
-		startTime: time.Now(),
+		serveMux:        *http.NewServeMux(),
+		logger:          logger,
+		all:             all,
+		versions:        versions,
+		timeToLive:      timeToLive,
+		startTime:       time.Now(),
+		cacheMiddleware: cacheMiddleware,
 	}
 	s.routes(webFS, indexTemplate, getInfo)
 
@@ -92,7 +98,7 @@ func (s *Server) addPrefixFSRoute(prefix string, version *Version) {
 	// create the path.
 	p, _ := url.JoinPath(prefix, "/", version.Name, "/")
 	// add the handler to the serve mux
-	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(version.Dir)))
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), s.cacheMiddleware(http.StripPrefix(p, http.FileServerFS(version.Dir))))
 	s.logger.Info("added prefix FS", "path", p)
 }
 
@@ -105,11 +111,15 @@ func (s *Server) addVersionRoutes(prefix string) {
 func (s *Server) addAllRoute(prefix string, fs fs.FS) {
 	logger := s.logger.With(slog.String("handler", "addAllHandler"))
 	p, _ := url.JoinPath(prefix, "/")
-	s.serveMux.Handle(fmt.Sprintf("GET %s", p), http.StripPrefix(p, http.FileServerFS(fs)))
+	s.serveMux.Handle(fmt.Sprintf("GET %s", p), s.cacheMiddleware(http.StripPrefix(p, http.FileServerFS(fs))))
 	logger.Info("added unversioned handler", "path", p)
 }
 
-func (s *Server) routes(webFS fs.FS, indexTemplate string, getinfo func() (*IndexPageInfo, error)) {
+func (s *Server) routes(
+	webFS fs.FS,
+	indexTemplate string,
+	getinfo func() (*IndexPageInfo, error),
+) {
 	// Create the paths for the tags, if any.
 	s.addVersionRoutes(pathVersions)
 	s.addAllRoute(pathAll, s.all)
@@ -182,7 +192,7 @@ func (s *Server) setCacheControl(header http.Header) {
 
 func (s *Server) ResetStartTime() {
 	logger := s.logger.With(slog.String("server.method", "ResetStartTime"))
-	
+
 	s.ttlMutex.Lock()
 	s.startTime = time.Now()
 	s.ttlMutex.Unlock()

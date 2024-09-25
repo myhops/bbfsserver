@@ -35,8 +35,15 @@ func writeEntry(w http.ResponseWriter, e *entry) {
 	w.Write(e.body)
 }
 
+// Middleware returns a middleware for the caching handler
+func Middleware(size int) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return Handler(next, size)
+	}
+}
+
 // CachingHandler returns a new handler that wraps next and caches each request
-func CachingHandler(next http.HandlerFunc, size int) http.HandlerFunc {
+func Handler(next http.Handler, size int) http.Handler {
 	logger := slog.Default().With(
 		slog.String("handler", "CachingHandler"),
 	)
@@ -51,7 +58,7 @@ func CachingHandler(next http.HandlerFunc, size int) http.HandlerFunc {
 		panic(err)
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logger.With(
 			slog.String("request.url", r.URL.String()),
 		)
@@ -64,7 +71,7 @@ func CachingHandler(next http.HandlerFunc, size int) http.HandlerFunc {
 
 		// Record the response.
 		rr := httptest.NewRecorder()
-		next(rr, r)
+		next.ServeHTTP(rr, r)
 		// Create the entry
 		ne := &entry{
 			header:     http.Header{},
@@ -93,5 +100,5 @@ func CachingHandler(next http.HandlerFunc, size int) http.HandlerFunc {
 
 		// Cache the result.
 		c.Set(r.URL.String(), ne)
-	}
+	})
 }

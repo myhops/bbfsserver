@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/myhops/bbfsserver/handlers/cache"
-	"github.com/myhops/bbfsserver/handlers/settable"
 	"github.com/myhops/bbfsserver/resources"
 	"github.com/myhops/bbfsserver/server"
 
@@ -230,8 +229,16 @@ func run(
 		return fmt.Errorf("error creating web sub fs: %w", err)
 	}
 
-	vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
-	settableVfsh := settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
+	vfsh := server.New(
+		logger,
+		allFS,
+		versions,
+		webFS,
+		resources.IndexHtmlTemplate,
+		getinfo,
+		opts.tagsPollInterval,
+		cache.Middleware(10_000),
+	)
 
 	// create context that catches kill and interrupt
 	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt, syscall.SIGTERM)
@@ -244,7 +251,7 @@ func run(
 
 	// create the server
 	srv := http.Server{
-		Handler:           LogRequestMiddleware(settableVfsh.ServeHTTP, logger),
+		Handler:           LogRequestMiddleware(vfsh.ServeHTTP, logger),
 		Addr:              opts.listenAddress,
 		ReadHeaderTimeout: 10 * time.Second,
 		BaseContext:       baseContext,
@@ -257,40 +264,6 @@ func run(
 			logger.Error("error", "error", err.Error())
 		}
 		logger.Info("server stopped")
-	}()
-
-	// Add tag checker.
-	go func() {
-		logger := logger.With("goroutine", "tag checker")
-		// Check every 5 minutes
-		tick := time.NewTicker(opts.tagsPollInterval)
-		for {
-			select {
-			case <-ctx.Done():
-				logger.Info("done received")
-				return
-			case <-tick.C:
-				logger.Info("checking for new tags")
-				t1, err := getTags(cfg, logger)
-				if err != nil {
-					break
-				}
-				if compareTags(t1, vfsh.GetVersionNames()) == 0 {
-					vfsh.ResetStartTime()
-					break
-				}
-				versions, err := getVersions(cfg, logger)
-				if err != nil {
-					logger.Error("error getting versions", "error", err.Error())
-					break
-				}
-				logger.Info("new tags found", slog.Any("tags", t1))
-				vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
-				// settableVfsh = settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
-				settableVfsh = settable.New(vfsh)
-				logger.Info("set new server", slog.Any("tags", t1))
-			}
-		}
 	}()
 
 	// Wait for a signal
