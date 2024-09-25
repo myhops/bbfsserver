@@ -290,7 +290,8 @@ func run(
 				}
 				logger.Info("new tags found", slog.Any("tags", t1))
 				vfsh := server.New(logger, allFS, versions, webFS, resources.IndexHtmlTemplate, getinfo, opts.tagsPollInterval)
-				settableVfsh = settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
+				// settableVfsh = settable.New(cache.CachingHandler(vfsh.ServeHTTP, 10_000))
+				settableVfsh = settable.New(vfsh)
 				logger.Info("set new server", slog.Any("tags", t1))
 			}
 		}
