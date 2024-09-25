@@ -23,11 +23,13 @@ func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
 
 // getTags returns all tags (max 1000)
 func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) ([]string, error) {
+	logger = logger.With(slog.String("method", "getTags"))
 	f := func(_ string) bool { return true}
 	if len(filter) == 1 {
+		logger.Info("added tag filter")
 		f = filter[0]
 	}
-	logger = logger.With(slog.String("method", "getTags"))
+
 	u := url.URL{
 		Scheme: "https",
 		Host:   cfg.Host,
