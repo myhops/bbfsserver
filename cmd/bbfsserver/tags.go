@@ -13,8 +13,8 @@ import (
 	bbfsserver "github.com/myhops/bbfs/bbclient/server"
 )
 
-func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
-	res, err := getTags(cfg, logger)
+func getTagsNil(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) []string {
+	res, err := getTags(cfg, logger, filter...)
 	if err != nil {
 		return nil
 	}
@@ -62,8 +62,8 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool)
 	return tags, nil
 }
 
-func getVersions(cfg *bbfs.Config, logger *slog.Logger) ([]*server.Version, error) {
-	tags, err := getTags(cfg, logger)
+func getVersions(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) ([]*server.Version, error) {
+	tags, err := getTags(cfg, logger, filter...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting versions: %s", err)
 	}
