@@ -22,7 +22,11 @@ func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
 }
 
 // getTags returns all tags (max 1000)
-func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
+func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) ([]string, error) {
+	f := func(_ string) bool { return true}
+	if len(filter) == 1 {
+		f = filter[0]
+	}
 	logger = logger.With(slog.String("method", "getTags"))
 	u := url.URL{
 		Scheme: "https",
@@ -46,7 +50,7 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 	}
 	tags := make([]string, 0, len(resp.Tags))
 	for _, tag := range resp.Tags {
-		if tag.Type != bbfsserver.TagTypeTag {
+		if !f(tag.Name) {
 			logger.Info("skipped tag", slog.String("name", tag.Name), slog.String("type", tag.Type))
 			continue
 		}

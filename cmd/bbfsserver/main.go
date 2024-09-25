@@ -271,7 +271,9 @@ func run(
 				return
 			case <-tick.C:
 				logger.Info("checking for new tags")
-				t1, err := getTags(cfg, logger)
+				t1, err := getTags(cfg, logger, func(name string) bool {
+					return strings.Contains(name, "/")
+				})
 				if err != nil {
 					break
 				}
