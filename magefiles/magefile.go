@@ -35,3 +35,10 @@ func BuildBBFSServerLocal() error {
 	return nil
 }
 
+func RunBBFSServer() error {
+	err := sh.Run("go", "run", "./cmd/bbfsserver/",  "github.com/myhops/bbfsserver/cmd/bbfsserver")
+	if err != nil {
+		return fmt.Errorf("go build failed: %w", err)
+	}
+	return nil
+}
