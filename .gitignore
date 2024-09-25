@@ -1,2 +1,4 @@
 ./bbfsserver
 bin/
+go.work
+go.work.sum
