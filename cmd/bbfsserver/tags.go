@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/myhops/bbfsserver/server"
 
@@ -13,8 +14,8 @@ import (
 	bbfsserver "github.com/myhops/bbfs/bbclient/server"
 )
 
-func getTagsNil(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) []string {
-	res, err := getTags(cfg, logger, filter...)
+func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
+	res, err := getTags(cfg, logger)
 	if err != nil {
 		return nil
 	}
@@ -22,14 +23,8 @@ func getTagsNil(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bo
 }
 
 // getTags returns all tags (max 1000)
-func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) ([]string, error) {
+func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 	logger = logger.With(slog.String("method", "getTags"))
-	f := func(_ string) bool { return true}
-	if len(filter) == 1 {
-		logger.Info("added tag filter")
-		f = filter[0]
-	}
-
 	u := url.URL{
 		Scheme: "https",
 		Host:   cfg.Host,
@@ -52,7 +47,7 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool)
 	}
 	tags := make([]string, 0, len(resp.Tags))
 	for _, tag := range resp.Tags {
-		if !f(tag.Name) {
+		if !strings.Contains(tag.Name, "/") {
 			logger.Info("skipped tag", slog.String("name", tag.Name), slog.String("type", tag.Type))
 			continue
 		}
@@ -62,8 +57,8 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool)
 	return tags, nil
 }
 
-func getVersions(cfg *bbfs.Config, logger *slog.Logger, filter ...func(string) bool) ([]*server.Version, error) {
-	tags, err := getTags(cfg, logger, filter...)
+func getVersions(cfg *bbfs.Config, logger *slog.Logger) ([]*server.Version, error) {
+	tags, err := getTags(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("error getting versions: %s", err)
 	}
