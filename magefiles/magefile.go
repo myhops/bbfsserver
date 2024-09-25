@@ -26,6 +26,7 @@ func BuildBBFSImageBD() error {
 	return nil
 }
 
+// BuildBBFSServerLocal build an exe in bin
 func BuildBBFSServerLocal() error {
 	err := sh.Run("go", "build", "-o" ,"./bin/bbfsserver",  "github.com/myhops/bbfsserver/cmd/bbfsserver")
 	if err != nil {

@@ -17,10 +17,11 @@ func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
 	res, err := getTags(cfg, logger)
 	if err != nil {
 		return nil
-	} 
+	}
 	return res
 }
 
+// getTags returns all tags (max 1000)
 func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 	u := url.URL{
 		Scheme: "https",
@@ -34,12 +35,20 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 		AccessKey: bbfsserver.SecretString(cfg.AccessKey),
 		Logger:    logger,
 	}
-	tags, err := client.GetTags(context.Background(), &bbfsserver.GetTagsCommand{
+	resp, err := client.GetTags(context.Background(), &bbfsserver.GetTagsCommand{
 		ProjectKey: cfg.ProjectKey,
 		RepoSlug:   cfg.RepositorySlug,
+		Limit:      1000,
 	})
 	if err != nil {
 		return nil, err
+	}
+	tags := make([]string, 0, len(resp.Tags))
+	for _, tag := range resp.Tags {
+		if tag.Type != bbfsserver.TagTypeTag {
+			continue
+		}
+		tags = append(tags, tag.Name)
 	}
 	return tags, nil
 }
@@ -75,4 +84,3 @@ func getVersionNames(versions []*server.Version) []string {
 	}
 	return res
 }
-
