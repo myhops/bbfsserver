@@ -71,9 +71,8 @@ func New(
 	getInfo func() (*IndexPageInfo, error),
 	// timeToLive sets the time the server is expected to run
 	timeToLive time.Duration,
-	// cacheMiddleware caches based on the path of the request
+	// cacheMiddleware caches requests based on the path of the request
 	cacheMiddleware func(next http.Handler) http.Handler,
-
 ) *Server {
 	s := &Server{
 		serveMux:        *http.NewServeMux(),
