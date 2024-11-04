@@ -47,7 +47,7 @@ func (s *Server) Versions() func(yield func(string) bool) bool {
 	}
 }
 
-// GetTags returns an array with the prefixes of the tags
+// GetVersionNames returns an array with the prefixes of the tags
 func (s *Server) GetVersionNames() []string {
 	res := make([]string, 0, len(s.versions))
 	for _, t := range s.versions {
