@@ -48,10 +48,10 @@ func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 	tags := make([]string, 0, len(resp.Tags))
 	for _, tag := range resp.Tags {
 		if !strings.Contains(tag.Name, "/") {
-			logger.Info("skipped tag", slog.String("name", tag.Name), slog.String("type", tag.Type))
+			logger.Debug("skipped tag", slog.String("name", tag.Name), slog.String("type", tag.Type))
 			continue
 		}
-		logger.Info("adding tag", slog.String("name", tag.Name))
+		logger.Debug("adding tag", slog.String("name", tag.Name))
 		tags = append(tags, tag.Name)
 	}
 	return tags, nil
