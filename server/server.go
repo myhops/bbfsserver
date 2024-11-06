@@ -191,12 +191,3 @@ func (s *Server) setCacheControl(header http.Header) {
 	logger.Info("set cache control", slog.String(cacheControl, val))
 }
 
-// func (s *Server) ResetStartTime() {
-// 	logger := s.logger.With(slog.String("server.method", "ResetStartTime"))
-
-// 	s.ttlMutex.Lock()
-// 	s.startTime = time.Now()
-// 	s.ttlMutex.Unlock()
-
-// 	logger.Info("start time reset", slog.Time("startTime", s.startTime))
-// }
