@@ -89,12 +89,20 @@ func getIndexPageInfo(
 	}
 }
 
-func latestTagChanged(s *resetServer,  opts *options, logger *slog.Logger) bool {
+func latestTagChanged(s *resetServer, opts *options, logger *slog.Logger) bool {
+	logger = logger.With(slog.String("method", "main.latestTagChanged"))
 	t := getLatestTag(opts, logger)
 	if t == "" {
+		logger.Info("no tag found")
 		return false
 	}
-	return t != "" && t != s.lastTag
+	changed := t != "" && t != s.lastTag
+	if changed {
+		logger.Info("new tag found",
+			slog.String("lastTag", s.lastTag),
+			slog.String("newTag", t))
+	}
+	return changed
 }
 
 func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version {
@@ -126,11 +134,11 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 		logger.Info("server stopped")
 	}()
 
-	FOR:
+FOR:
 	for {
-		SELECT:
+	SELECT:
 		select {
-		case  <-ctx.Done():
+		case <-ctx.Done():
 			break FOR
 		case <-time.After(opts.changePollingInterval):
 			if !latestTagChanged(srv, opts, logger) {

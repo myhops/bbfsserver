@@ -14,14 +14,6 @@ import (
 	bbfsserver "github.com/myhops/bbfs/bbclient/server"
 )
 
-func getTagsNil(cfg *bbfs.Config, logger *slog.Logger) []string {
-	res, err := getTags(cfg, logger)
-	if err != nil {
-		return nil
-	}
-	return res
-}
-
 // getTags returns all tags (max 1000)
 func getTags(cfg *bbfs.Config, logger *slog.Logger) ([]string, error) {
 	logger = logger.With(slog.String("method", "getTags"))
@@ -80,12 +72,4 @@ func getVersionsFromTags(cfg *bbfs.Config, logger *slog.Logger, tags []string) (
 	}
 	return res, nil
 }
-
-// func getVersionNames(versions []*server.Version) []string {
-// 	res := make([]string, 0, len(versions))
-// 	for _, v := range versions {
-// 		res = append(res, v.Name)
-// 	}
-// 	return res
-// }
 

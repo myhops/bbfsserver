@@ -16,17 +16,6 @@ import (
 	"github.com/myhops/bbfsserver/server"
 )
 
-// type serverConfig struct {
-// 	Logger          *slog.Logger
-// 	AllFS           fs.FS
-// 	Versions        []*server.Version
-// 	WebFS           fs.FS
-// 	IndexTemplate   string
-// 	GetInfo         func() (*server.IndexPageInfo, error)
-// 	TimeToLive      time.Duration
-// 	CacheMiddleware func(next http.Handler) http.Handler
-// }
-
 type resetServer struct {
 	http.Server
 	handler *settable.Settable
@@ -39,7 +28,7 @@ type resetServer struct {
 	lastTag string
 }
 
-func buildHandler(logger *slog.Logger, opts *options) (http.Handler, error) {
+func (s *resetServer) buildHandler(logger *slog.Logger, opts *options) (http.Handler, error) {
 	cfg := &bbfs.Config{
 		Host:           opts.host,
 		ProjectKey:     opts.projectKey,
@@ -59,13 +48,25 @@ func buildHandler(logger *slog.Logger, opts *options) (http.Handler, error) {
 		versions = v
 	}
 
+	s.lastTag = getLatestTag(opts, logger)
+	tags, err := getTags(cfg, logger)
+	if err != nil {
+		return nil, err
+	}
+	lastTag := ""
+	if len(tags) > 0 {
+		lastTag = tags[0]
+	}
+
 	getinfo := getIndexPageInfo(
 		opts.repoURL,
 		"OLO KOR Build Reports",
 		opts.projectKey,
 		opts.repositorySlug,
-		getTagsNil(cfg, logger),
+		tags,
 	)
+
+	s.lastTag = lastTag
 
 	webFS, err := fs.Sub(resources.StaticHtmlFS, "web")
 	if err != nil {
@@ -96,14 +97,28 @@ func getLatestTag(opts *options, logger *slog.Logger) string {
 	if err != nil {
 		return ""
 	}
-	if tags == nil  || len(tags) == 0 {
+	if len(tags) == 0 {
 		return ""
 	}
 	return tags[0]
 }
 
 func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetServer, error) {
-	h, err := buildHandler(logger, opts)
+	// baseContext for the http server
+	baseContext := func(_ net.Listener) context.Context {
+		return ctx
+	}
+
+	srv := &resetServer{
+		Server: http.Server{
+			Addr:              opts.listenAddress,
+			ReadHeaderTimeout: 10 * time.Second,
+			BaseContext:       baseContext,
+		},
+		logger: logger,
+		opts:   opts,
+	}
+	h, err := srv.buildHandler(logger, opts)
 	if err != nil {
 		return nil, fmt.Errorf("build hander failed: %s", err.Error())
 	}
@@ -112,30 +127,14 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetS
 
 	sh := settable.New(h)
 
-	// baseContext for the http server
-	baseContext := func(_ net.Listener) context.Context {
-		return ctx
-	}
-
 	// create the server
-	srv := &resetServer{
-		Server: http.Server{
-			Handler:           LogRequestMiddleware(h.ServeHTTP, logger),
-			Addr:              opts.listenAddress,
-			ReadHeaderTimeout: 10 * time.Second,
-			BaseContext:       baseContext,
-		},
-		handler: sh,
-		logger:  logger,
-		opts:    opts,
-		lastTag: getLatestTag(opts, logger),
-	}
+	srv.handler = sh
 	return srv, nil
 }
 
 func (s *resetServer) rebuild() error {
 	s.logger.Info("rebuilding server")
-	h, err := buildHandler(s.logger, s.opts)
+	h, err := s.buildHandler(s.logger, s.opts)
 	if err != nil {
 		s.logger.Error("building handler failed", slog.String("error", err.Error()))
 		return fmt.Errorf("build hander failed: %s", err.Error())
