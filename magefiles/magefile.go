@@ -42,3 +42,11 @@ func RunBBFSServer() error {
 	}
 	return nil
 }
+
+func RunGodoc() error {
+	err := sh.RunV("godoc", "-v", "-http", "localhost:6060", "-index")
+	if err != nil {
+		return fmt.Errorf("go build failed: %w", err)
+	}
+	return nil
+}

@@ -56,6 +56,7 @@ func (s *Server) GetVersionNames() []string {
 	return res
 }
 
+// New creates a new server using
 func New(
 	// logger
 	logger *slog.Logger,
