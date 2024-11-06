@@ -134,8 +134,10 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetS
 }
 
 func (s *resetServer) rebuild() error {
+	s.logger.Info("rebuilding server")
 	h, err := buildHandler(s.logger, s.opts)
 	if err != nil {
+		s.logger.Error("building handler failed", slog.String("error", err.Error()))
 		return fmt.Errorf("build hander failed: %s", err.Error())
 	}
 
@@ -143,6 +145,7 @@ func (s *resetServer) rebuild() error {
 
 	// Set the handler
 	s.handler.Set(h)
+	s.logger.Info("set new handler")
 
 	return nil
 }
