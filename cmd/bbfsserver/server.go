@@ -18,7 +18,8 @@ import (
 
 type resetServer struct {
 	http.Server
-	handler *settable.Settable
+
+	settableHandler *settable.Settable
 
 	// Keep for rebuilds
 	logger *slog.Logger
@@ -125,10 +126,10 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetS
 
 	h = LogRequestMiddleware(h.ServeHTTP, logger)
 
+	// Create the settable handler and set it in the http.Server
 	sh := settable.New(h)
-
-	// create the server
-	srv.handler = sh
+	srv.Server.Handler = sh
+	srv.settableHandler = sh
 	return srv, nil
 }
 
@@ -143,7 +144,7 @@ func (s *resetServer) rebuild() error {
 	h = LogRequestMiddleware(h.ServeHTTP, s.logger)
 
 	// Set the handler
-	s.handler.Set(h)
+	s.settableHandler.Set(h)
 	s.logger.Info("set new handler")
 
 	return nil
