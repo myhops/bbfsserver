@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "embed"
-	"slices"
 	"time"
 )
 
@@ -35,29 +34,8 @@ func setIfSet(v string, val *string) {
 	}
 }
 
-// TODO: Cleanup
-func compareTags(t1, t2 []string) int {
-	slices.Sort(t1)
-	slices.Sort(t2)
-	return slices.Compare(t1, t2)
-}
-
-func getPollInterval(interval string) time.Duration {
-	res := newTagPollingInterval
-	if interval == "" {
-		return res
-	}
-	i, err := time.ParseDuration(interval)
-	if err != nil {
-		return res
-	}
-	if i < time.Second {
-		return time.Second
-	}
-	res = i
-	return res
-}
-
+// setIfSetDuration sets duration from v if v is a valid duration.
+// The minumum value is 1 second. 
 func setIfSetDuration(v string, dp *time.Duration) {
 	if v == "" {
 		return

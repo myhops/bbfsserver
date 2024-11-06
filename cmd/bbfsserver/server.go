@@ -87,6 +87,14 @@ func (s *resetServer) buildHandler(logger *slog.Logger, opts *options) (http.Han
 	return vfsh, nil
 }
 
+func (s *resetServer) buildHandlerWithMiddleware(logger *slog.Logger, opts *options)  (http.Handler, error) {
+	h, err := s.buildHandler(logger , opts )
+	if err != nil {
+		return nil, err
+	}
+	return LogRequestMiddleware(h.ServeHTTP, logger), nil
+}
+
 func getLatestTag(opts *options, logger *slog.Logger) string {
 	cfg := &bbfs.Config{
 		Host:           opts.host,
@@ -110,42 +118,41 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetS
 		return ctx
 	}
 
+	sh := settable.New(nil)
 	srv := &resetServer{
 		Server: http.Server{
 			Addr:              opts.listenAddress,
 			ReadHeaderTimeout: 10 * time.Second,
 			BaseContext:       baseContext,
+			Handler: sh,
 		},
 		logger: logger,
 		opts:   opts,
+		settableHandler: sh,
 	}
-	h, err := srv.buildHandler(logger, opts)
+	h, err := srv.buildHandlerWithMiddleware(logger, opts)
 	if err != nil {
 		return nil, fmt.Errorf("build hander failed: %s", err.Error())
 	}
 
-	h = LogRequestMiddleware(h.ServeHTTP, logger)
-
 	// Create the settable handler and set it in the http.Server
-	sh := settable.New(h)
-	srv.Server.Handler = sh
-	srv.settableHandler = sh
+	srv.settableHandler.Set(h)
 	return srv, nil
 }
 
 func (s *resetServer) rebuild() error {
-	s.logger.Info("rebuilding server")
-	h, err := s.buildHandler(s.logger, s.opts)
+	logger := s.logger.With(slog.String("method", "resetServer.rebuild"))
+	logger.Info("rebuilding server")
+	h, err := s.buildHandlerWithMiddleware(s.logger, s.opts)
 	if err != nil {
-		s.logger.Error("building handler failed", slog.String("error", err.Error()))
+		logger.Error("build handler failed", slog.String("error", err.Error()))
 		return fmt.Errorf("build hander failed: %s", err.Error())
 	}
 
-	h = LogRequestMiddleware(h.ServeHTTP, s.logger)
-
 	// Set the handler
 	s.settableHandler.Set(h)
-	s.logger.Info("set new handler")
+	logger.Info("set new handler")
 
 	return nil
 }
+

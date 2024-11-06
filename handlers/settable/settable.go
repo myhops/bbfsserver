@@ -27,9 +27,10 @@ func (h *Settable) Set(next http.Handler) {
 
 // NewSettable returns a new settable handler that wraps next
 func New(next http.Handler) *Settable {
+	if next == nil {
+		next = http.NotFoundHandler()
+	}
 	return &Settable{
 		next: next,
 	}
 }
-
-
