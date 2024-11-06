@@ -134,8 +134,10 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 			break FOR
 		case <-time.After(5*time.Minute):
 			if !latestTagChanged(srv, opts, logger) {
+				logger.Info("no changes detected")
 				break SELECT
 			}
+			logger.Info("changes detected")
 			// rebuild the server
 			logger.Info("start server rebuild")
 			if err := srv.rebuild(); err != nil {

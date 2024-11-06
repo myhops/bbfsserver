@@ -6,6 +6,7 @@ export BBFSSRV_PROJECT_KEY=essentials
 export BBFSSRV_REPOSITORY_SLUG=olo-kor-build-reports
 export BBFSSRV_LOG_FORMAT=text
 export BBFSSRV_ACCESS_KEY=$(gopass --password private/olo-kor-build-reports/access-token/test-bbfs)
+export BBFSSRV_CHANGE_POLLING_INTERVAL=5s
 # export BBFSSRV_REPO_URL=
 
 WDIR=$(dirname ${BASH_SOURCE[0]})
