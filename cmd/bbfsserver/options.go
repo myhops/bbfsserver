@@ -34,6 +34,7 @@ func setIfSet(v string, val *string) {
 	}
 }
 
+// TODO: Cleanup
 func compareTags(t1, t2 []string) int {
 	slices.Sort(t1)
 	slices.Sort(t2)

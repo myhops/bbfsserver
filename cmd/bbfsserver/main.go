@@ -5,10 +5,8 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,8 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/myhops/bbfsserver/handlers/cache"
-	"github.com/myhops/bbfsserver/resources"
 	"github.com/myhops/bbfsserver/server"
 
 	"github.com/myhops/bbfs"
@@ -100,65 +96,18 @@ func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version 
 }
 
 func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error {
-	cfg := &bbfs.Config{
-		Host:           opts.host,
-		ProjectKey:     opts.projectKey,
-		RepositorySlug: opts.repositorySlug,
-		AccessKey:      opts.accessKey,
-	}
-
-	allFS := bbfs.NewFS(cfg)
-
-	var versions []*server.Version
-	versions = getDryRunVersions(cfg, logger)
-	if opts.dryRun != "true" {
-		v, err := getVersions(cfg, logger)
-		if err != nil {
-			return fmt.Errorf("error getting tags: %w", err)
-		}
-		versions = v
-	}
-
-	getinfo := getIndexPageInfo(
-		opts.repoURL,
-		"OLO KOR Build Reports",
-		opts.projectKey,
-		opts.repositorySlug,
-		getTagsNil(cfg, logger),
-	)
-
-	webFS, err := fs.Sub(resources.StaticHtmlFS, "web")
-	if err != nil {
-		return fmt.Errorf("error creating web sub fs: %w", err)
-	}
-
-	vfsh := server.New(
-		logger,
-		allFS,
-		versions,
-		webFS,
-		resources.IndexHtmlTemplate,
-		getinfo,
-		opts.tagsPollInterval,
-		cache.Middleware(10_000),
-	)
-
 	// create context that catches kill and interrupt
-	ctx, stop := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(ctx, os.Kill, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// baseContext for the http server
-	baseContext := func(_ net.Listener) context.Context {
-		return ctx
+	// Create the settable middleware
+
+	// build the server
+	srv, err := newServer(ctx, logger, opts)
+	if err != nil {
+		return fmt.Errorf("error building server: %s", err.Error())
 	}
 
-	// create the server
-	srv := http.Server{
-		Handler:           LogRequestMiddleware(vfsh.ServeHTTP, logger),
-		Addr:              opts.listenAddress,
-		ReadHeaderTimeout: 10 * time.Second,
-		BaseContext:       baseContext,
-	}
 	// Start the server in the background
 	go func() {
 		logger := logger.With("goroutine", "listen and serve")
@@ -168,6 +117,20 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 		}
 		logger.Info("server stopped")
 	}()
+
+	FOR:
+	for {
+		select {
+		case  <-ctx.Done():
+			break FOR
+		case <-time.After(5*time.Minute):
+			// rebuild the server
+			logger.Info("start server rebuild")
+			if err := srv.rebuild(); err != nil {
+				logger.Error("error rebuilding server", slog.String("error", err.Error()))
+			}
+		}
+	}
 
 	// Wait for a signal
 	<-ctx.Done()
@@ -188,7 +151,7 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 }
 
 // Run runs the program.
-func Run(
+func run(
 	ctx context.Context,
 	args []string,
 	getenv func(string) string,
@@ -237,7 +200,7 @@ func main() {
 			log.Printf("Recovered error in main: %v", r)
 		}
 	}()
-	err := Run(context.Background(), os.Args, os.Getenv, os.Stderr)
+	err := run(context.Background(), os.Args, os.Getenv, os.Stderr)
 	if err != nil {
 		log.Printf("run error: %s", err.Error())
 	}
