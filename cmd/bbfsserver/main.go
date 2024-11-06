@@ -132,7 +132,7 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 		select {
 		case  <-ctx.Done():
 			break FOR
-		case <-time.After(5*time.Minute):
+		case <-time.After(opts.changePollingInterval):
 			if !latestTagChanged(srv, opts, logger) {
 				logger.Info("no changes detected")
 				break SELECT
