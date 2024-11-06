@@ -82,7 +82,7 @@ func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
 	setIfSet(getenv("BBFSSRV_DRY_RUN"), &o.dryRun)
 	setIfSet(getenv("BBFSSRV_REPO_URL"), &o.repoURL)
-	setIfSetDuration("BBFSSRV_CHANGE_POLLING_INTERVAL", &o.changePollingInterval)
+	setIfSetDuration(getenv("BBFSSRV_CHANGE_POLLING_INTERVAL"), &o.changePollingInterval)
 
 	// fix listen address if needed.
 	if o.listenAddress[0] != ':' {
