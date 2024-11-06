@@ -34,6 +34,9 @@ type resetServer struct {
 	// Keep for rebuilds
 	logger *slog.Logger
 	opts   *options
+
+	// last tag
+	lastTag string
 }
 
 func buildHandler(logger *slog.Logger, opts *options) (http.Handler, error) {
@@ -76,10 +79,27 @@ func buildHandler(logger *slog.Logger, opts *options) (http.Handler, error) {
 		webFS,
 		resources.IndexHtmlTemplate,
 		getinfo,
-		opts.tagsPollInterval,
+		opts.changePollingInterval,
 		cache.Middleware(10_000),
 	)
 	return vfsh, nil
+}
+
+func getLatestTag(opts *options, logger *slog.Logger) string {
+	cfg := &bbfs.Config{
+		Host:           opts.host,
+		ProjectKey:     opts.projectKey,
+		RepositorySlug: opts.repositorySlug,
+		AccessKey:      opts.accessKey,
+	}
+	tags, err := getTags(cfg, logger)
+	if err != nil {
+		return ""
+	}
+	if tags == nil  || len(tags) == 0 {
+		return ""
+	}
+	return tags[0]
 }
 
 func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetServer, error) {
@@ -106,8 +126,9 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*resetS
 			BaseContext:       baseContext,
 		},
 		handler: sh,
-		logger: logger,
-		opts: opts,
+		logger:  logger,
+		opts:    opts,
+		lastTag: getLatestTag(opts, logger),
 	}
 	return srv, nil
 }

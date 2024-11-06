@@ -63,8 +63,8 @@ func TestGetOptionsFromEnv(t *testing.T) {
 	opts := &options{}
 	opts.fromEnv(testGetOptionsFromEnvGetenv)
 
-	if opts.tagsPollInterval != time.Second {
-		t.Errorf("want %v, got %v", time.Minute, opts.tagsPollInterval)
+	if opts.changePollingInterval != time.Second {
+		t.Errorf("want %v, got %v", time.Minute, opts.changePollingInterval)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestDryRun(t *testing.T) {
 		versions, 
 		resources.StaticHtmlFS, 
 		resources.IndexHtmlTemplate, 
-		getinfo, opts.tagsPollInterval,
+		getinfo, opts.changePollingInterval,
 		cache.Middleware(10_000),
 	)
 
@@ -121,7 +121,7 @@ func TestIndexPage(t *testing.T) {
 		versions, 
 		resources.StaticHtmlFS, 
 		resources.IndexHtmlTemplate, 
-		getinfo, opts.tagsPollInterval,
+		getinfo, opts.changePollingInterval,
 		cache.Middleware(10_000))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)

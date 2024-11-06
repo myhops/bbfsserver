@@ -89,6 +89,14 @@ func getIndexPageInfo(
 	}
 }
 
+func latestTagChanged(s *resetServer,  opts *options, logger *slog.Logger) bool {
+	t := getLatestTag(opts, logger)
+	if t == "" {
+		return false
+	}
+	return t != "" && t != s.lastTag
+}
+
 func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version {
 	tags := []string{"testtag1", "testtag2/v1"}
 	res, _ := getVersionsFromTags(cfg, logger, tags)
@@ -120,10 +128,14 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 
 	FOR:
 	for {
+		SELECT:
 		select {
 		case  <-ctx.Done():
 			break FOR
 		case <-time.After(5*time.Minute):
+			if !latestTagChanged(srv, opts, logger) {
+				break SELECT
+			}
 			// rebuild the server
 			logger.Info("start server rebuild")
 			if err := srv.rebuild(); err != nil {
@@ -176,7 +188,7 @@ func run(
 		"listenAddress", opts.listenAddress,
 		"projectKey", opts.projectKey,
 		"repositorySlug", opts.repositorySlug,
-		slog.Duration("pollingInterval", opts.tagsPollInterval),
+		slog.Duration("pollingInterval", opts.changePollingInterval),
 	)
 	return runWithOpts(ctx, logger, opts)
 }

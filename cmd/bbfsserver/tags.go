@@ -81,10 +81,11 @@ func getVersionsFromTags(cfg *bbfs.Config, logger *slog.Logger, tags []string) (
 	return res, nil
 }
 
-func getVersionNames(versions []*server.Version) []string {
-	res := make([]string, 0, len(versions))
-	for _, v := range versions {
-		res = append(res, v.Name)
-	}
-	return res
-}
+// func getVersionNames(versions []*server.Version) []string {
+// 	res := make([]string, 0, len(versions))
+// 	for _, v := range versions {
+// 		res = append(res, v.Name)
+// 	}
+// 	return res
+// }
+

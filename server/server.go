@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"iter"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -36,14 +37,14 @@ type Server struct {
 }
 
 // Tags returns an iterator, go 1.23.0, just for the fun of it.
-func (s *Server) Versions() func(yield func(string) bool) bool {
-	return func(yield func(string) bool) bool {
-		for _, t := range s.versions {
-			if !yield(t.Name) {
-				return false
+// func (s *Server) Versions() func(yield func(string) bool) bool {
+func (s *Server) Versions() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for _, v := range s.versions {
+			if !yield(v.Name) {
+				return
 			}
 		}
-		return true
 	}
 }
 
@@ -190,12 +191,12 @@ func (s *Server) setCacheControl(header http.Header) {
 	logger.Info("set cache control", slog.String(cacheControl, val))
 }
 
-func (s *Server) ResetStartTime() {
-	logger := s.logger.With(slog.String("server.method", "ResetStartTime"))
+// func (s *Server) ResetStartTime() {
+// 	logger := s.logger.With(slog.String("server.method", "ResetStartTime"))
 
-	s.ttlMutex.Lock()
-	s.startTime = time.Now()
-	s.ttlMutex.Unlock()
+// 	s.ttlMutex.Lock()
+// 	s.startTime = time.Now()
+// 	s.ttlMutex.Unlock()
 
-	logger.Info("start time reset", slog.Time("startTime", s.startTime))
-}
+// 	logger.Info("start time reset", slog.Time("startTime", s.startTime))
+// }

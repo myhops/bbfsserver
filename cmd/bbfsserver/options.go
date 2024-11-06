@@ -1,30 +1,31 @@
 package main
 
 import (
+	_ "embed"
 	"slices"
 	"time"
-	_ "embed"
 )
 
 //go:embed usage.txt
 var usageText string
 
 type options struct {
-	host             string
-	logFormat        string
-	listenAddress    string
-	projectKey       string
-	repositorySlug   string
-	accessKey        string
-	tagsPollInterval time.Duration
-	dryRun           string
-	repoURL          string
+	host                  string
+	logFormat             string
+	listenAddress         string
+	projectKey            string
+	repositorySlug        string
+	accessKey             string
+	changePollingInterval time.Duration
+	dryRun                string
+	repoURL               string
 }
 
 func defaultOptions() *options {
 	return &options{
-		logFormat:     "json",
-		listenAddress: ":8080",
+		logFormat:             "json",
+		listenAddress:         ":8080",
+		changePollingInterval: 5 * time.Minute,
 	}
 }
 
@@ -57,6 +58,20 @@ func getPollInterval(interval string) time.Duration {
 	return res
 }
 
+func setIfSetDuration(v string, dp *time.Duration) {
+	if v == "" {
+		return
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		return
+	}
+	if d < time.Second {
+		d = time.Second
+	}
+	*dp = d
+}
+
 func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("PORT"), &o.listenAddress)
 	setIfSet(getenv("BBFSSRV_LISTEN_ADDRESS"), &o.listenAddress)
@@ -67,8 +82,7 @@ func (o *options) fromEnv(getenv func(string) string) {
 	setIfSet(getenv("BBFSSRV_LOG_FORMAT"), &o.logFormat)
 	setIfSet(getenv("BBFSSRV_DRY_RUN"), &o.dryRun)
 	setIfSet(getenv("BBFSSRV_REPO_URL"), &o.repoURL)
-
-	o.tagsPollInterval = getPollInterval(getenv("BBFSSRV_TAG_POLL_INTERVAL"))
+	setIfSetDuration("BBFSSRV_CHANGE_POLLING_INTERVAL", &o.changePollingInterval)
 
 	// fix listen address if needed.
 	if o.listenAddress[0] != ':' {

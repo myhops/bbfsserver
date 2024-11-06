@@ -3,6 +3,7 @@ package server
 import (
 	"net/url"
 	"strings"
+	"testing"
 )
 
 func getIndexPageInfo(
@@ -45,4 +46,33 @@ func getIndexPageInfo(
 		}
 		return res, nil
 	}
+}
+
+func TestIteratorSignature(t *testing.T) {
+	s := &Server{
+		versions: []*Version{
+			{Name: "v1"},
+			{Name: "v2"},
+			{Name: "v3"},
+			{Name: "v4"},
+			{Name: "v5"},
+			{Name: "v6"},
+			{Name: "v7"},
+		},
+	}
+	var i int
+	for v := range s.Versions() {
+		t.Logf("name %d: %s", i, v)
+		i++
+	}
+
+	i = 0
+	for v := range s.Versions() {
+		t.Logf("name %d: %s", i, v)
+		i++
+		if !(i < 4) {
+			break
+		}
+	}
+
 }
