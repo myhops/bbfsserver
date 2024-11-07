@@ -16,6 +16,8 @@ type rebuildServer struct {
 	handler *rebuild.RebuildHandler
 
 	latestTag string
+	bbfsCfg *bbfs.Config
+	logger *slog.Logger
 }
 
 func getLatestTag(cfg *bbfs.Config, logger *slog.Logger) string {
@@ -52,11 +54,15 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*rebuil
 		},
 		handler: handler,
 		latestTag: getLatestTag(bbfsCfgFromOpts(opts), logger),
+		bbfsCfg: bbfsCfgFromOpts(opts),
+		logger: logger,
 	}
 
 	return srv, nil
 }
 
 func (s *rebuildServer) rebuild(ctx context.Context) error {
+	// Save the latest tag
+	s.latestTag = getLatestTag(s.bbfsCfg, s.logger)
 	return s.handler.Rebuild(ctx)
 }
