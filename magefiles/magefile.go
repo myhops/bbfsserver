@@ -45,7 +45,7 @@ func getAllTags() (string, error) {
 	return strings.Join(tags, ","), nil
 }
 
-// BuildBBFSImageBD builds a container image and pushes it to docker.io
+// BuildBBFSImageBD builds a container image and pushes it to cir-cn.chp.belastingdienst.nl/zandp06
 func BuildBBFSImageBD() error {
 	env := map[string]string{
 		"KO_DOCKER_REPO":      "cir-cn.chp.belastingdienst.nl/zandp06",
