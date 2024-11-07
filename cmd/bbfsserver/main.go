@@ -89,17 +89,17 @@ func getIndexPageInfo(
 	}
 }
 
-func latestTagChanged(s *resetServer, opts *options, logger *slog.Logger) bool {
+func latestTagChanged(lastTag string, cfg *bbfs.Config, logger *slog.Logger) bool {
 	logger = logger.With(slog.String("method", "main.latestTagChanged"))
-	t := getLatestTag(opts, logger)
+	t := getLatestTag(cfg, logger)
 	if t == "" {
 		logger.Info("no tag found")
 		return false
 	}
-	changed := t != "" && t != s.lastTag
+	changed := t != "" && t != lastTag
 	if changed {
 		logger.Info("new tag found",
-			slog.String("lastTag", s.lastTag),
+			slog.String("lastTag", lastTag),
 			slog.String("newTag", t))
 	}
 	return changed
@@ -111,12 +111,19 @@ func getDryRunVersions(cfg *bbfs.Config, logger *slog.Logger) []*server.Version 
 	return res
 }
 
+func bbfsCfgFromOpts(opts *options) *bbfs.Config {
+	return &bbfs.Config{
+		Host:           opts.host,
+		ProjectKey:     opts.projectKey,
+		RepositorySlug: opts.repositorySlug,
+		AccessKey:      opts.accessKey,
+	}
+}
+
 func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error {
 	// create context that catches kill and interrupt
 	ctx, stop := signal.NotifyContext(ctx, os.Kill, os.Interrupt, syscall.SIGTERM)
 	defer stop()
-
-	// Create the settable middleware
 
 	// build the server
 	srv, err := newServer(ctx, logger, opts)
@@ -141,14 +148,15 @@ FOR:
 		case <-ctx.Done():
 			break FOR
 		case <-time.After(opts.changePollingInterval):
-			if !latestTagChanged(srv, opts, logger) {
+			cfg := bbfsCfgFromOpts(opts)
+			if !latestTagChanged(srv.latestTag, cfg, logger) {
 				logger.Info("no changes detected")
 				break SELECT
 			}
 			logger.Info("changes detected")
 			// rebuild the server
 			logger.Info("start server rebuild")
-			if err := srv.rebuild(); err != nil {
+			if err := srv.rebuild(ctx); err != nil {
 				logger.Error("error rebuilding server", slog.String("error", err.Error()))
 			}
 		}
