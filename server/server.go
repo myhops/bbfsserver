@@ -57,6 +57,26 @@ func (s *Server) GetVersionNames() []string {
 	return res
 }
 
+type Option func(*Server)
+
+const (
+	ControllersPath = "/api/controllers"
+)
+
+func WithControllerHandler(name string, method string, f http.HandlerFunc) func(*Server) {
+	return func(s *Server) {
+		path, err := url.JoinPath("/", ControllersPath, name)
+		if err != nil {
+			panic(fmt.Errorf("error building path: %w", err).Error())
+		}
+		pattern := fmt.Sprintf("%s %s", method, path)
+		s.serveMux.HandleFunc(pattern, f)
+		s.logger.Info("added callback",
+			slog.String("method", "server.WithControllerHandler"),
+			slog.String("pattern", pattern))
+	}
+}
+
 // New creates a new server using
 func New(
 	// logger
@@ -75,7 +95,16 @@ func New(
 	timeToLive time.Duration,
 	// cacheMiddleware caches requests based on the path of the request
 	cacheMiddleware func(next http.Handler) http.Handler,
+	// Options
+	serverOptions ...Option,
 ) *Server {
+	if cacheMiddleware == nil {
+		cacheMiddleware = func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w,r)
+			})
+		}
+	}
 	s := &Server{
 		serveMux:        *http.NewServeMux(),
 		logger:          logger,
@@ -86,6 +115,11 @@ func New(
 		cacheMiddleware: cacheMiddleware,
 	}
 	s.routes(webFS, indexTemplate, getInfo)
+
+	// Apply options
+	for _, o := range serverOptions {
+		o(s)
+	}
 
 	return s
 }
@@ -190,4 +224,3 @@ func (s *Server) setCacheControl(header http.Header) {
 	header.Set(cacheControl, val)
 	logger.Info("set cache control", slog.String(cacheControl, val))
 }
-

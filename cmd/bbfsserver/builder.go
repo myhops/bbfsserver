@@ -23,7 +23,7 @@ type builder struct {
 
 // newBuilder constructs a new builder that is not initialized yet.
 // To use this builder, call build
-func newBuilder(logger *slog.Logger, opts *options) *builder {
+func newBuilder(logger *slog.Logger, opts *options, serverOptions ...server.Option) *builder {
 	return &builder{
 		logger:  logger,
 		opts:    opts,

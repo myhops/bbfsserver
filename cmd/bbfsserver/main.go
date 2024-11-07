@@ -125,8 +125,23 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 	ctx, stop := signal.NotifyContext(ctx, os.Kill, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Create a handler that sends a signal to a channel to trigger a rebuild
+	rebuildChan := make(chan struct{}, 1)
+	rebuildhandler := func(w http.ResponseWriter, r *http.Request) {
+		logger := logger.With(slog.String("method", "rebuildHandler"))
+		logger.Info("rebuild requested")
+		// Send a signal but fail if queue is full
+		select {
+		case rebuildChan <- struct{}{}:
+			logger.Info("sent signal to trigger rebuild")
+		default:
+			logger.Info("could not send signal to trigger requild")
+		}
+	}
+
 	// build the server
-	srv, err := newServer(ctx, logger, opts)
+	srv, err := newServer(ctx, logger, opts,
+		server.WithControllerHandler("rebuild", http.MethodGet, rebuildhandler))
 	if err != nil {
 		return fmt.Errorf("error building server: %s", err.Error())
 	}
@@ -141,24 +156,30 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 		logger.Info("server stopped")
 	}()
 
+	rebuild := func(msg string) {
+		logger := logger.With(slog.String("message", msg))
+		cfg := bbfsCfgFromOpts(opts)
+		if !latestTagChanged(srv.latestTag, cfg, logger) {
+			logger.Info("no changes detected")
+			return
+		}
+		logger.Info("changes detected")
+		// rebuild the server
+		logger.Info("start server rebuild")
+		if err := srv.rebuild(ctx); err != nil {
+			logger.Error("error rebuilding server", slog.String("error", err.Error()))
+		}
+	}
+
 FOR:
 	for {
-	SELECT:
 		select {
 		case <-ctx.Done():
 			break FOR
 		case <-time.After(opts.changePollingInterval):
-			cfg := bbfsCfgFromOpts(opts)
-			if !latestTagChanged(srv.latestTag, cfg, logger) {
-				logger.Info("no changes detected")
-				break SELECT
-			}
-			logger.Info("changes detected")
-			// rebuild the server
-			logger.Info("start server rebuild")
-			if err := srv.rebuild(ctx); err != nil {
-				logger.Error("error rebuilding server", slog.String("error", err.Error()))
-			}
+			rebuild("timer triggered")
+		case <-rebuildChan:
+			rebuild("rebuild callback")
 		}
 	}
 
