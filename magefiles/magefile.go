@@ -22,28 +22,13 @@ func gitGetLatestTag() (string, error) {
 	return sh.Output("git", "describe", "--tags", "--abbrev=0")
 }
 
-// BuildBBFSImageBD builds a container image and pushes it to docker.io
-func BuildBBFSImageBD() error {
-	env := map[string]string{
-		"KO_DOCKER_REPO": "cir-cn.chp.belastingdienst.nl/zandp06",
-		"KO_DEFAULTBASEIMAGE": "cir-cn.chp.belastingdienst.nl/zandp06/cgr.dev/chainguard/static:latest-certs",
-	}
-	err := sh.RunWith(env,
-		"ko", "build", "./cmd/bbfsserver")
-	if err != nil {
-		return fmt.Errorf("ko build failed: %w", err)
-	}
-	return nil
-}
-
-// BuildBBFSImageLocal builds a container image and pushes it to the local docker daemon
-func BuildBBFSImageLocal() error {
+func getAllTags() (string, error) {
 	// collect the tags
 	tags := []string{"latest"}
 
 	t, err := getGitShortHash()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if t != "" {
 		tags = append(tags, t)
@@ -51,13 +36,39 @@ func BuildBBFSImageLocal() error {
 
 	t, err = gitGetLatestTag()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if t != "" {
 		tags = append(tags, t)
 	}
 
-	imageTags := strings.Join(tags, ",")
+	return strings.Join(tags, ","), nil
+}
+
+// BuildBBFSImageBD builds a container image and pushes it to docker.io
+func BuildBBFSImageBD() error {
+	env := map[string]string{
+		"KO_DOCKER_REPO":      "cir-cn.chp.belastingdienst.nl/zandp06",
+		"KO_DEFAULTBASEIMAGE": "cir-cn.chp.belastingdienst.nl/zandp06/cgr.dev/chainguard/static:latest-certs",
+	}
+
+	imageTags, err := getAllTags()
+	if err != nil {
+		return err
+	}
+
+	if err := sh.RunWith(env, "ko", "build", "--tags", imageTags, "./cmd/bbfsserver"); err != nil {
+		return fmt.Errorf("ko build failed: %w", err)
+	}
+	return nil
+}
+
+// BuildBBFSImageLocal builds a container image and pushes it to the local docker daemon
+func BuildBBFSImageLocal() error {
+	imageTags, err := getAllTags()
+	if err != nil {
+		return err
+	}
 
 	err = sh.Run("ko", "build", "--local", "--tags", imageTags, "./cmd/bbfsserver")
 	if err != nil {
