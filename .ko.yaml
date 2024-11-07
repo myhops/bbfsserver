@@ -1,5 +1,7 @@
+# TODO: add user friendly image tag
+
 builds:
   - id: bbfsserver
     dir: .
     main: ./cmd/bbfsserver
-defaultBaseImage: cir-cn.chp.belastingdienst.nl/zandp06/cgr.dev/chainguard/static:latest-certs
+
