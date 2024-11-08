@@ -13,11 +13,21 @@ import (
 
 type rebuildServer struct {
 	http.Server
-	handler *rebuild.RebuildHandler
+	handler http.Handler
+
+	rebuildFunc func(context.Context) error
 
 	latestTag string
 	bbfsCfg   *bbfs.Config
 	logger    *slog.Logger
+}
+
+type rebuildServerOption func(s *rebuildServer)
+
+func WithMiddleware(func(next http.Handler) http.Handler) rebuildServerOption {
+	return func(s *rebuildServer) {
+
+	}
 }
 
 func getLatestTag(cfg *bbfs.Config, logger *slog.Logger) string {
@@ -31,20 +41,20 @@ func getLatestTag(cfg *bbfs.Config, logger *slog.Logger) string {
 	return tags[0]
 }
 
-func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*rebuildServer, error) {
+func newRebuildServer(
+	ctx context.Context,
+	logger *slog.Logger,
+	opts *options,
+	handler http.Handler,
+	rebuildFunc func(context.Context) error,
+) (*rebuildServer, error) {
 	// baseContext for the http server
 	baseContext := func(_ net.Listener) context.Context {
 		return ctx
 	}
 
-	// Create the builder.
-	builder := newBuilder(logger, opts)
-	// Create the rebuild handler.
-	handler, err := rebuild.New(ctx, builder.build)
-	if err != nil {
-		return nil, err
-	}
-
+	bbfsCfg := bbfsCfgFromOpts(opts)
+	latestTag := getLatestTag(bbfsCfg, logger)
 	srv := &rebuildServer{
 		Server: http.Server{
 			Addr:              opts.listenAddress,
@@ -53,16 +63,27 @@ func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*rebuil
 			Handler:           handler,
 		},
 		handler:   handler,
-		latestTag: getLatestTag(bbfsCfgFromOpts(opts), logger),
-		bbfsCfg:   bbfsCfgFromOpts(opts),
+		latestTag: latestTag,
+		bbfsCfg:   bbfsCfg,
 		logger:    logger,
 	}
 
 	return srv, nil
 }
 
+func newRebuildHandler(ctx context.Context, logger *slog.Logger, opts *options) (*rebuild.RebuildHandler, error) {
+	// Create the builder.
+	builder := newBuilder(logger, opts)
+	// Create the rebuild handler.
+	handler, err := rebuild.New(ctx, builder.build)
+	if err != nil {
+		return nil, err
+	}
+	return handler, nil
+}
+
 func (s *rebuildServer) rebuild(ctx context.Context) error {
 	// Save the latest tag
 	s.latestTag = getLatestTag(s.bbfsCfg, s.logger)
-	return s.handler.Rebuild(ctx)
+	return s.rebuildFunc(ctx)
 }

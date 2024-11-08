@@ -136,14 +136,21 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 		}
 	}
 
+	// Build the rebuild handler
+	rebuildHandler, err := newRebuildHandler(ctx, logger, opts)
+	if err != nil {
+		return err
+	}
+
+	// Add a callback for rebuild
+	sidewayHandler := sideway.New(rebuildHandler, logger)
+	sidewayHandler.HandleFunc("/api/controllers/rebuild", rebuildhandler)
+	
 	// build the server
-	srv, err := newServer(ctx, logger, opts)
+	srv, err := newRebuildServer(ctx, logger, opts, sidewayHandler, rebuildHandler.Rebuild)
 	if err != nil {
 		return fmt.Errorf("error building server: %s", err.Error())
 	}
-	// Add a callback for rebuild
-	callbackSrv := sideway.New(srv.handler, logger)
-	callbackSrv.HandleFunc("/api/controllers/rebuild", rebuildhandler)
 
 	// Start the server in the background
 	go func() {
