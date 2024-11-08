@@ -66,6 +66,7 @@ func newRebuildServer(
 		latestTag: latestTag,
 		bbfsCfg:   bbfsCfg,
 		logger:    logger,
+		rebuildFunc: rebuildFunc,
 	}
 
 	return srv, nil
