@@ -23,10 +23,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
-const (
-	newTagPollingInterval = 5 * time.Minute
-)
-
 func setMaxProcs() {
 	pf := func(format string, args ...any) {
 		msg := fmt.Sprintf(format, args...)
