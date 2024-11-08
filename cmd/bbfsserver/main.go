@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -254,7 +255,7 @@ func initLogger(logFormat string, lw io.Writer) {
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Recovered error in main: %v", r)
+			log.Printf("Recovered error in main: %v\nStack trace:\n%s", r, string(debug.Stack()))
 		}
 	}()
 	err := run(context.Background(), os.Args, os.Getenv, os.Stderr)

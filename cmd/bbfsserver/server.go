@@ -41,6 +41,7 @@ func getLatestTag(cfg *bbfs.Config, logger *slog.Logger) string {
 	return tags[0]
 }
 
+// newRebuildServer create a new server that supports rebuilds
 func newRebuildServer(
 	ctx context.Context,
 	logger *slog.Logger,
@@ -72,6 +73,15 @@ func newRebuildServer(
 	return srv, nil
 }
 
+// rebuild triggers a rebuild and saves the latest tag
+func (s *rebuildServer) rebuild(ctx context.Context) error {
+	// Save the latest tag
+	s.latestTag = getLatestTag(s.bbfsCfg, s.logger)
+	return s.rebuildFunc(ctx)
+}
+
+
+// newRebuildHandler creates a new rebuild handler
 func newRebuildHandler(ctx context.Context, logger *slog.Logger, opts *options) (*rebuild.RebuildHandler, error) {
 	// Create the builder.
 	builder := newBuilder(logger, opts)
@@ -83,8 +93,3 @@ func newRebuildHandler(ctx context.Context, logger *slog.Logger, opts *options) 
 	return handler, nil
 }
 
-func (s *rebuildServer) rebuild(ctx context.Context) error {
-	// Save the latest tag
-	s.latestTag = getLatestTag(s.bbfsCfg, s.logger)
-	return s.rebuildFunc(ctx)
-}
