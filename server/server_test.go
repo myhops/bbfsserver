@@ -1,15 +1,9 @@
 package server
 
 import (
-	"io"
-	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
-	"slices"
 	"strings"
 	"testing"
-	"time"
 )
 
 func getIndexPageInfo(
@@ -80,71 +74,4 @@ func TestIteratorSignature(t *testing.T) {
 			break
 		}
 	}
-}
-
-func TestCallback(t *testing.T) {
-	getinfo := func() (*IndexPageInfo, error) {
-		return nil, nil
-	}
-	responseBody := []byte("Hello there!!!")
-	srv := New(
-		slog.Default(),
-		nil,
-		[]*Version{
-			{Name: "v1"},
-			{Name: "v2"},
-			{Name: "v3"},
-			{Name: "v4"},
-			{Name: "v5"},
-			{Name: "v6"},
-			{Name: "v7"},
-		},
-		nil,
-		"",
-		getinfo,
-		time.Second,
-		nil,
-		WithControllerHandler(
-			"test1",
-			http.MethodGet,
-			func(w http.ResponseWriter, r *http.Request) {
-				w.Write(responseBody)
-			}),
-		WithControllerHandler(
-			"test2",
-			http.MethodGet,
-			func(w http.ResponseWriter, r *http.Request) {
-				w.Write(responseBody)
-			}),
-	)
-
-	tsrv := httptest.NewServer(srv)
-	defer tsrv.Close()
-
-	f := func(name string) {
-		path, err := url.JoinPath(tsrv.URL, ControllersPath, name)
-		if err != nil {
-			t.Fatalf("error: %s", err.Error())
-		}
-
-		resp, err := http.Get(path)
-		if err != nil {
-			t.Fatalf("error: %s", err.Error())
-		}
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("bad status code: %s", resp.Status)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("error: %s", err.Error())
-		}
-		if !slices.Equal(responseBody, body) {
-			t.Errorf("expected %s, got %s", string(responseBody), string(body))
-		}
-	}
-	f("test1")
-	f("test2")
-
-	t.Error()
 }

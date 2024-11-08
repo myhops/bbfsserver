@@ -9,7 +9,6 @@ import (
 
 	"github.com/myhops/bbfs"
 	"github.com/myhops/bbfsserver/handlers/rebuild"
-	"github.com/myhops/bbfsserver/server"
 )
 
 type rebuildServer struct {
@@ -32,14 +31,14 @@ func getLatestTag(cfg *bbfs.Config, logger *slog.Logger) string {
 	return tags[0]
 }
 
-func newServer(ctx context.Context, logger *slog.Logger, opts *options, serverOptions ...server.Option) (*rebuildServer, error) {
+func newServer(ctx context.Context, logger *slog.Logger, opts *options) (*rebuildServer, error) {
 	// baseContext for the http server
 	baseContext := func(_ net.Listener) context.Context {
 		return ctx
 	}
 
 	// Create the builder.
-	builder := newBuilder(logger, opts, serverOptions...)
+	builder := newBuilder(logger, opts)
 	// Create the rebuild handler.
 	handler, err := rebuild.New(ctx, builder.build)
 	if err != nil {

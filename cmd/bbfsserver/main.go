@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/myhops/bbfsserver/handlers/sideway"
 	"github.com/myhops/bbfsserver/server"
 
 	"github.com/myhops/bbfs"
@@ -140,11 +141,13 @@ func runWithOpts(ctx context.Context, logger *slog.Logger, opts *options) error 
 	}
 
 	// build the server
-	srv, err := newServer(ctx, logger, opts,
-		server.WithControllerHandler("rebuild", http.MethodGet, rebuildhandler))
+	srv, err := newServer(ctx, logger, opts)
 	if err != nil {
 		return fmt.Errorf("error building server: %s", err.Error())
 	}
+	// Add a callback for rebuild
+	callbackSrv := sideway.New(srv.handler, logger)
+	callbackSrv.HandleFunc("/api/controllers/rebuild", rebuildhandler)
 
 	// Start the server in the background
 	go func() {

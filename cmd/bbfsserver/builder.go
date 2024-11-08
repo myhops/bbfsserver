@@ -19,18 +19,15 @@ type builder struct {
 	opts *options
 
 	bbfsCfg *bbfs.Config
-
-	serverOptions []server.Option
 }
 
 // newBuilder constructs a new builder that is not initialized yet.
 // To use this builder, call build
-func newBuilder(logger *slog.Logger, opts *options, serverOptions ...server.Option) *builder {
+func newBuilder(logger *slog.Logger, opts *options) *builder {
 	return &builder{
 		logger:  logger,
 		opts:    opts,
 		bbfsCfg: bbfsCfgFromOpts(opts),
-		serverOptions: serverOptions,
 	}
 }
 
@@ -85,7 +82,6 @@ func (b *builder) buildHandler(ctx context.Context) (http.Handler, error) {
 		getinfo,
 		b.opts.changePollingInterval,
 		cache.Middleware(10_000),
-		b.serverOptions...,
 	)
 	return vfsh, nil
 }
