@@ -1,9 +1,13 @@
 #!/bin/bash
 
+# ACCESS_KEY_NAME=private/obp-pnr/build-reports/http-token
+ACCESS_KEY_NAME=obp-pnr/git-repo/accesskeys/http/access-token
+
 podman run --rm -p 18080:8080 \
     -e BBFSSRV_HOST=bitbucket.belastingdienst.nl \
-    -e BBFSSRV_PROJECT_KEY=essentials \
-    -e BBFSSRV_REPOSITORY_SLUG=olo-kor-build-reports \
+    -e BBFSSRV_PROJECT_KEY=OBDMO \
+    -e BBFSSRV_REPOSITORY_SLUG=obp-pnr-build-reports \
     -e BBFSSRV_LOG_FORMAT=text \
-    -e BBFSSRV_ACCESS_KEY=$(gopass --password private/olo-kor-build-reports/access-token/test-bbfs) \
-    cir-cn.chp.belastingdienst.nl/zandp06/bbfsserver-013f3560b18499010383cf0a71c2c23c
+    -e BBFSSRV_ACCESS_KEY=$(gopass --password $ACCESS_KEY_NAME) \
+    -e BBFSSRV_TITLE="OBP PNR-Parkeren en Routeren" \
+    cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver:v0.0.12

@@ -62,7 +62,7 @@ func (b *builder) buildHandler(ctx context.Context) (http.Handler, error) {
 
 	getinfo := getIndexPageInfo(
 		b.opts.repoURL,
-		"OLO KOR Build Reports",
+		b.opts.title,
 		b.bbfsCfg.ProjectKey,
 		b.bbfsCfg.RepositorySlug,
 		tags,

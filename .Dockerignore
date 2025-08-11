@@ -1,0 +1,7 @@
+certs/
+scripts/
+.ko.yaml
+devbox.*
+LICENSE
+README.md
+magefiles/

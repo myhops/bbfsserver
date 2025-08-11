@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/magefile/mage/mg"
@@ -48,9 +49,14 @@ func getAllTags() (string, error) {
 // BuildBBFSImageBD builds a container image and pushes it to cir-cn.chp.belastingdienst.nl/zandp06
 func BuildBBFSImageBD() error {
 	env := map[string]string{
-		"KO_DOCKER_REPO":      "cir-cn.chp.belastingdienst.nl/zandp06",
-		"KO_DEFAULTBASEIMAGE": "cir-cn.chp.belastingdienst.nl/zandp06/cgr.dev/chainguard/static:latest-certs",
+		// "KO_DOCKER_REPO":      "cir-cn-devops.chp.belastingdienst.nl/obp-pnr",
+		"KO_DOCKER_REPO":      "ko.local",
+		"KO_DEFAULTBASEIMAGE": "cir-cn-cpet.chp.belastingdienst.nl/external/docker.io/alpine:3.22.1",
+		"DOCKER_HOST":         "unix:///tmp/podman.sock",
 	}
+
+	// podman pull cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver-313e8234ab7c35c20f5af54de96e0417:latest
+	// podman pull cir-cn-cpet.chp.belastingdienst.nl/external/docker.io/alpine:3.22.1
 
 	imageTags, err := getAllTags()
 	if err != nil {
@@ -59,6 +65,52 @@ func BuildBBFSImageBD() error {
 
 	if err := sh.RunWith(env, "ko", "build", "--tags", imageTags, "./cmd/bbfsserver"); err != nil {
 		return fmt.Errorf("ko build failed: %w", err)
+	}
+	return nil
+}
+
+var images = []string{
+	"cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver:latest",
+	"cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver:v0.0.12",
+}
+
+func PublishFromDockerfile() error {
+	mg.Deps(BuildDockerfile)
+
+	// Push the first image
+	if err := sh.Run("podman", "push", images[0]); err != nil {
+			return fmt.Errorf("error pusing %s: %w", images[0], err)
+		}
+
+	for _, i := range images[1:] {
+		// split the image and the tag
+		parts := strings.Split(i, ":")
+		if len(parts) != 2 {
+			continue
+		}
+		if err := sh.Run("crane", "tag", parts[0], parts[1]); err != nil {
+			return fmt.Errorf("error tagging %s with %s: %w", parts[0], parts[1], err)
+		}
+	}
+	return nil
+}
+
+func CopyCerts() error {
+	os.MkdirAll("certs", 0755)
+	return sh.Run("cp", "/etc/ssl/certs/ca-certificates.crt", "certs")
+}
+
+func BuildDockerfile() error {
+	mg.Deps(CopyCerts)
+
+	args := []string{"build"}
+	for _, i := range images {
+		args = append(args, "--tag", i)
+	}
+	args = append(args, ".")
+
+	if err := sh.Run("podman", args...); err != nil {
+		return fmt.Errorf("error building image: %w", err)
 	}
 	return nil
 }
