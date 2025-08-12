@@ -57,7 +57,7 @@ func getVersions(cfg *bbfs.Config, logger *slog.Logger) ([]*server.Version, erro
 	return getVersionsFromTags(cfg, logger, tags)
 }
 
-func getVersionsFromTags(cfg *bbfs.Config, logger *slog.Logger, tags []string) ([]*server.Version, error) {
+func getVersionsFromTags(cfg *bbfs.Config, _ *slog.Logger, tags []string) ([]*server.Version, error) {
 	c := *cfg
 	cfg = nil // make sure we do not use it
 

@@ -69,7 +69,7 @@ func BuildBBFSImageBD() error {
 	return nil
 }
 
-var images = []string{
+var BDImages = []string{
 	"cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver:latest",
 	"cir-cn-devops.chp.belastingdienst.nl/obp-pnr/bbfsserver:v0.0.12",
 }
@@ -78,13 +78,16 @@ func PublishFromDockerfile() error {
 	mg.Deps(BuildDockerfile)
 
 	// Push the first image
-	if err := sh.Run("podman", "push", images[0]); err != nil {
-			return fmt.Errorf("error pusing %s: %w", images[0], err)
+	{
+		image := BDImages[0]
+		if err := sh.Run("podman", "push", image); err != nil {
+			return fmt.Errorf("error pusing %s: %w", image, err)
 		}
+	}
 
-	for _, i := range images[1:] {
+	for _, image := range BDImages[1:] {
 		// split the image and the tag
-		parts := strings.Split(i, ":")
+		parts := strings.Split(image, ":")
 		if len(parts) != 2 {
 			continue
 		}
@@ -104,7 +107,7 @@ func BuildDockerfile() error {
 	mg.Deps(CopyCerts)
 
 	args := []string{"build"}
-	for _, i := range images {
+	for _, i := range BDImages {
 		args = append(args, "--tag", i)
 	}
 	args = append(args, ".")

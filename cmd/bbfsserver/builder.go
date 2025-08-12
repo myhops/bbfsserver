@@ -47,7 +47,7 @@ func (b *builder) buildHandlerWithMiddleware(ctx context.Context) (http.Handler,
 	return LogRequestMiddleware(bh.ServeHTTP, b.logger), nil
 }
 
-func (b *builder) buildHandler(ctx context.Context) (http.Handler, error) {
+func (b *builder) buildHandler(_ context.Context) (http.Handler, error) {
 	allFS := bbfs.NewFS(b.bbfsCfg)
 
 	versions, err := getVersions(b.bbfsCfg, b.logger)
